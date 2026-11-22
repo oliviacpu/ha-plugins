@@ -139,20 +139,28 @@ export class HorosComputerTile extends BaseTileCard {
     return pickExtreme(this.hass, this._config?.disks_free, "min");
   }
 
-  /** With disk_rows: a bar for every listed disk, named after its entity. */
+  /**
+   * With disk_rows: a bar for every listed disk, named after its entity. A full
+   * disk shows in the bar's colour; a red glyph after the name is kept for the
+   * drive itself reporting trouble, from the entity's `problem` attribute (with
+   * `health` saying what), so a failing disk shows even when it's nearly empty.
+   */
   private _diskRows(): (LevelRow | undefined)[] {
     const config = this._config!;
     return (config.disks ?? []).map((entity) => {
       const role = resolveRole(this.hass, entity);
-      // The device's name can differ in case from the tile's ("monochrome Disk"
-      // under "Monochrome"), so the prefix is matched without case.
-      const friendly: string | undefined = role?.stateObj?.attributes.friendly_name;
-      const prefix = config.name?.toLowerCase();
+      const attrs = role?.stateObj?.attributes ?? {};
       const name =
-        (friendly && prefix && friendly.toLowerCase().startsWith(prefix)
-          ? friendly.slice(prefix.length).trim()
-          : friendly) || t(this.hass, "level.disk");
-      return this._levelRow(name, role);
+        stripDeviceName(attrs.friendly_name, config.name) ?? t(this.hass, "level.disk");
+      const row = this._levelRow(name, role);
+      if (!row) return undefined;
+      const problem = attrs.problem === true || attrs.problem === "true";
+      return {
+        ...row,
+        alarm: false,
+        flag: problem ? "mdi:alert-circle" : undefined,
+        flagTitle: problem ? String(attrs.health ?? "") || undefined : undefined,
+      };
     });
   }
 

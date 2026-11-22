@@ -36,6 +36,13 @@ export interface LevelRow {
   alarm?: boolean;
   /** The alarm glyph: running out and overflowing get different ones. */
   alarmIcon?: string;
+  /**
+   * A problem with the thing itself rather than its level, as a red glyph after
+   * the name: a disk reporting bad sectors while it's nearly empty.
+   */
+  flag?: string;
+  /** What the flag means, added to the row's tooltip. */
+  flagTitle?: string;
   /** On the charger: the bar has a light running along it. */
   charging?: boolean;
 }
@@ -267,7 +274,7 @@ export function renderLevels(
           <button
             class="level ${row.alarm ? "low" : ""}"
             style="--ink: ${row.ink};"
-            title="${row.name}: ${row.text}"
+            title="${row.name}: ${row.text}${row.flagTitle ? ` — ${row.flagTitle}` : ""}"
             @click=${(ev: Event) => {
               ev.stopPropagation();
               onTap(row.entityId);
@@ -280,7 +287,9 @@ export function renderLevels(
                   ></ha-icon>`
                 : row.icon
                   ? html`<ha-icon class="mark" icon=${row.icon}></ha-icon>`
-                  : nothing}${row.name}
+                  : nothing}${row.name}${row.flag
+                ? html`<ha-icon class="flag" icon=${row.flag}></ha-icon>`
+                : nothing}
             </span>
             <span class="bar">
               <span class="track"></span>

@@ -12,7 +12,8 @@ export function stripDeviceName(
   deviceName: string | undefined
 ): string | undefined {
   if (!friendlyName) return undefined;
-  if (deviceName && friendlyName.startsWith(deviceName)) {
+  // Without case: a device called "monochrome" under a tile called "Monochrome".
+  if (deviceName && friendlyName.toLowerCase().startsWith(deviceName.toLowerCase())) {
     const rest = friendlyName.slice(deviceName.length).trim();
     if (rest) return rest;
   }
