@@ -144,9 +144,14 @@ export class HorosComputerTile extends BaseTileCard {
     const config = this._config!;
     return (config.disks ?? []).map((entity) => {
       const role = resolveRole(this.hass, entity);
+      // The device's name can differ in case from the tile's ("monochrome Disk"
+      // under "Monochrome"), so the prefix is matched without case.
+      const friendly: string | undefined = role?.stateObj?.attributes.friendly_name;
+      const prefix = config.name?.toLowerCase();
       const name =
-        stripDeviceName(role?.stateObj?.attributes.friendly_name, config.name) ??
-        t(this.hass, "level.disk");
+        (friendly && prefix && friendly.toLowerCase().startsWith(prefix)
+          ? friendly.slice(prefix.length).trim()
+          : friendly) || t(this.hass, "level.disk");
       return this._levelRow(name, role);
     });
   }
