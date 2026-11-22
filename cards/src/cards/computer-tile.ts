@@ -40,8 +40,14 @@ export interface ComputerTileConfig extends TileBaseConfig {
   gpu?: string;
   /** Every temperature sensor. The hottest one is shown. */
   temperatures?: string[];
-  /** Disk partitions as per cent used. The fullest one is shown. */
+  /** Disk partitions as per cent used. The fullest one is shown, or each one with `disk_rows`. */
   disks?: string[];
+  /**
+   * One bar per disk, in the order listed, instead of only the fullest. Each is
+   * named after its entity, without the computer's name ("rgb Disk (C:)" shows
+   * as "Disk (C:)").
+   */
+  disk_rows?: boolean;
   /**
    * Disk partitions as per cent **free** — what the HA companion app for macOS
    * reports, for one. The one with the least free space is shown. A separate role
@@ -75,7 +81,8 @@ export class HorosComputerTile extends BaseTileCard {
 
   /** Level rows under the tile: roughly two per grid row. */
   protected override contentRows(): number {
-    return this.levelRows(4) + this.fixedRows();
+    const disks = this._config?.disk_rows ? (this._config.disks?.length ?? 0) : 1;
+    return this.levelRows(3 + Math.max(disks, 1)) + this.fixedRows();
   }
 
   private _bigKeys: string[] = ["temperature"];
@@ -130,6 +137,18 @@ export class HorosComputerTile extends BaseTileCard {
   /** The partition with the least free space left. */
   private _freeDisk(): ResolvedRole | undefined {
     return pickExtreme(this.hass, this._config?.disks_free, "min");
+  }
+
+  /** With disk_rows: a bar for every listed disk, named after its entity. */
+  private _diskRows(): (LevelRow | undefined)[] {
+    const config = this._config!;
+    return (config.disks ?? []).map((entity) => {
+      const role = resolveRole(this.hass, entity);
+      const name =
+        stripDeviceName(role?.stateObj?.attributes.friendly_name, config.name) ??
+        t(this.hass, "level.disk");
+      return this._levelRow(name, role);
+    });
   }
 
   private _levelRow(
@@ -194,7 +213,9 @@ export class HorosComputerTile extends BaseTileCard {
       this._levelRow(t(this.hass, "level.cpu"), roles[1].role),
       this._levelRow(t(this.hass, "level.memory"), roles[2].role),
       this._levelRow(t(this.hass, "level.gpu"), roles[3].role),
-      this._levelRow(t(this.hass, "level.disk"), roles[4].role),
+      ...(config.disk_rows
+        ? this._diskRows()
+        : [this._levelRow(t(this.hass, "level.disk"), roles[4].role)]),
       // Free space is a resource that runs out, so both the colour and the alarm
       // here behave like a battery's, not like load's.
       freeDisk

@@ -36,6 +36,7 @@ export class HorosComputerTileEditor extends BaseCardEditor {
         },
       },
       { name: "disks", selector: { entity: { multiple: true } } },
+      { name: "disk_rows", selector: booleanSelector },
       { name: "disks_free", selector: { entity: { multiple: true } } },
       { name: "sensors", selector: { entity: { multiple: true } } },
       {
@@ -80,6 +81,7 @@ export class HorosComputerTileEditor extends BaseCardEditor {
         temperatures: "Датчики температуры",
         disks: "Разделы диска (занято)",
         disks_free: "Разделы диска (свободно)",
+        disk_rows: "Строка для каждого диска",
         sensors: "Что ещё сказать",
         alerts: "Сообщать, когда сработало",
         big_values: "Крупно справа (не больше трёх)",
@@ -95,6 +97,7 @@ export class HorosComputerTileEditor extends BaseCardEditor {
         temperatures: "Temperature sensors",
         disks: "Disks (used)",
         disks_free: "Disks (free)",
+        disk_rows: "A row for each disk",
         sensors: "What else to show",
         alerts: "Report only when triggered",
         big_values: "Large on the right (up to three)",
