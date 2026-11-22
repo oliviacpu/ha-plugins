@@ -545,7 +545,7 @@ const oi = { attribute: !0, type: String, converter: De, reflect: !1, hasChanged
   }
   throw Error("Unsupported decorator location: " + i);
 };
-function V(s) {
+function K(s) {
   return (e, t) => typeof t == "object" ? ai(s, e, t) : ((i, r, n) => {
     const o = r.hasOwnProperty(n);
     return r.constructor.createProperty(n, i), o ? Object.getOwnPropertyDescriptor(r, n) : void 0;
@@ -557,7 +557,7 @@ function V(s) {
  * SPDX-License-Identifier: BSD-3-Clause
  */
 function b(s) {
-  return V({ ...s, state: !0, attribute: !1 });
+  return K({ ...s, state: !0, attribute: !1 });
 }
 const W = ue`
   :host {
@@ -811,7 +811,7 @@ function F(s, e) {
   const t = Es(s, e);
   return t ? { text: t, entityId: e?.entityId } : void 0;
 }
-function U(s, e) {
+function z(s, e) {
   const t = Ge(s, e);
   return t ? { text: t, entityId: e?.entityId } : void 0;
 }
@@ -819,7 +819,7 @@ function Ge(s, e) {
   if (!(!s || !e?.stateObj || !e.unavailable))
     return s.formatEntityState(e.stateObj);
 }
-function Y(s) {
+function V(s) {
   if (!s?.stateObj || s.impossible) return;
   const e = Number(s.stateObj.state);
   return Number.isFinite(e) ? e : void 0;
@@ -1709,10 +1709,10 @@ class x extends le {
   }
 }
 St([
-  V({ attribute: !1 })
+  K({ attribute: !1 })
 ], x.prototype, "hass");
 St([
-  V({ attribute: !1 })
+  K({ attribute: !1 })
 ], x.prototype, "layout");
 St([
   b()
@@ -1887,7 +1887,7 @@ class Ps extends x {
       imageUrl: this.entityImage(o?.stateObj),
       defaultIconAction: he(o?.entityId),
       secondary: S([
-        U(this.hass, o),
+        z(this.hass, o),
         ...n.map((l) => F(this.hass, l.role))
       ]),
       mainEntityId: o?.entityId,
@@ -1959,7 +1959,7 @@ class Is extends x {
       secondary: S([
         // One of the two returns a piece: an available switch gives its state,
         // an unavailable one its unavailability status.
-        U(this.hass, o),
+        z(this.hass, o),
         // The switch is the card's main entity, so its state can be shown
         // through state_content, just like on the stock tile.
         ...n.map(
@@ -2049,7 +2049,7 @@ class js extends x {
       role: p(this.hass, e[c])
     })), i = this.missingRolesWarning(t.map((c) => c.role));
     if (i) return this.renderWarning(i);
-    const { big: r, rest: n } = X(t, this._bigKeys), o = t[0].role, l = Y(o), a = Rs(
+    const { big: r, rest: n } = X(t, this._bigKeys), o = t[0].role, l = V(o), a = Rs(
       l,
       e.dry_below ?? We,
       e.wet_above ?? Be
@@ -2061,7 +2061,7 @@ class js extends x {
       imageUrl: this.entityImage(o?.stateObj),
       defaultIconAction: he(o?.entityId),
       secondary: S([
-        U(this.hass, o),
+        z(this.hass, o),
         ...n.map((c) => F(this.hass, c.role))
       ]),
       mainEntityId: o?.entityId,
@@ -2166,7 +2166,7 @@ class Ie extends le {
   }
 }
 Ze([
-  V({ attribute: !1 })
+  K({ attribute: !1 })
 ], Ie.prototype, "hass");
 Ze([
   b()
@@ -2244,7 +2244,7 @@ E("horos-buttons-tile", Ns, {
   },
   preview: !0
 });
-const rt = (s) => Math.max(0, Math.min(100, s)), K = ue`
+const rt = (s) => Math.max(0, Math.min(100, s)), G = ue`
   /*
    * The rows fill whatever height they are given and spread evenly in it —
    * the same thing hui-card-features does with its own spare room, so a list
@@ -2440,7 +2440,7 @@ const rt = (s) => Math.max(0, Math.min(100, s)), K = ue`
     }
   }
 `;
-function G(s, e, t) {
+function Y(s, e, t) {
   return v`
     <div
       class="levels"
@@ -2537,7 +2537,7 @@ var rn = Object.defineProperty, nn = (s, e, t, i) => {
 };
 class Ls extends x {
   static {
-    this.styles = [W, K];
+    this.styles = [W, G];
   }
   /** Level rows under the tile: roughly two per grid row. */
   contentRows() {
@@ -2609,7 +2609,7 @@ class Ls extends x {
           icon: "mdi:water"
         }
       ] : [],
-      customFeatures: G(
+      customFeatures: Y(
         e.map((a) => ({
           entityId: a.entityId,
           name: a.name ?? a.entityId,
@@ -2658,7 +2658,7 @@ var on = Object.defineProperty, an = (s, e, t, i) => {
 const ln = 20;
 class Hs extends x {
   static {
-    this.styles = [W, K];
+    this.styles = [W, G];
   }
   /** Level rows under the tile: roughly two per grid row. */
   contentRows() {
@@ -2682,7 +2682,7 @@ class Hs extends x {
     const e = this._config, t = p(this.hass, e.vacuum), i = p(this.hass, e.battery), r = (e.sensors ?? []).map((c) => M(c)).map((c) => p(this.hass, c.entity)), n = this.missingRolesWarning([t, i, ...r]);
     if (n) return this.renderWarning(n);
     const o = t?.stateObj?.attributes.friendly_name, l = e.low_below ?? ln, a = (e.consumables ?? []).map((c) => M(c)).map((c) => {
-      const h = p(this.hass, c.entity), u = Y(h) ?? 0, g = c.name ?? re(h?.stateObj?.attributes.friendly_name, o);
+      const h = p(this.hass, c.entity), u = V(h) ?? 0, g = c.name ?? re(h?.stateObj?.attributes.friendly_name, o);
       return {
         entityId: c.entity,
         name: g ?? c.entity,
@@ -2701,12 +2701,12 @@ class Hs extends x {
       primary: e.name ?? o ?? d(this.hass, "vacuum.title"),
       mainEntityId: t?.entityId,
       secondary: S([
-        U(this.hass, t),
+        z(this.hass, t),
         this.mainStateSegment(t),
         ...r.map((c) => F(this.hass, c))
       ]),
       values: i ? this.bigValues([{ key: "battery", role: i }]) : [],
-      customFeatures: a.length ? G(a, (c) => this.fireMoreInfo(c)) : void 0
+      customFeatures: a.length ? Y(a, (c) => this.fireMoreInfo(c)) : void 0
     });
   }
 }
@@ -2755,7 +2755,7 @@ class Ds extends x {
         r.push(a.entity);
         continue;
       }
-      const h = Y(c);
+      const h = V(c);
       h !== void 0 && i.push({
         entityId: a.entity,
         name: a.name ?? Fs(c?.stateObj?.attributes.friendly_name) ?? a.entity,
@@ -2921,7 +2921,7 @@ class zs extends x {
       primary: e.name ?? d(this.hass, "server.title"),
       mainEntityId: i?.entityId ?? t[0].role?.entityId,
       secondary: S([
-        U(this.hass, i),
+        z(this.hass, i),
         this.mainStateSegment(i),
         ...l.map((a) => {
           const c = F(this.hass, a.role);
@@ -2956,7 +2956,7 @@ class Ws extends x {
   static {
     this.styles = [
       W,
-      K,
+      G,
       ue`
       span[slot="secondary"] {
         white-space: normal;
@@ -2995,7 +2995,7 @@ class Ws extends x {
     const e = this._config, t = p(this.hass, e.person), i = p(this.hass, e.battery), r = p(this.hass, e.location), n = this.missingRolesWarning([t, i, r]);
     if (n) return this.renderWarning(n);
     const o = (e.devices ?? []).map((l) => M(l)).map((l) => {
-      const a = p(this.hass, l.entity), c = Y(a), h = l.name ?? Fs(
+      const a = p(this.hass, l.entity), c = V(a), h = l.name ?? Fs(
         re(
           a?.stateObj?.attributes.friendly_name,
           e.name
@@ -3019,12 +3019,12 @@ class Ws extends x {
       mainEntityId: t?.entityId,
       imageUrl: this.entityImage(t?.stateObj),
       secondary: S([
-        U(this.hass, t),
+        z(this.hass, t),
         this.mainStateSegment(t),
         F(this.hass, r)
       ]),
       values: i ? this.bigValues([{ key: "battery", role: i }]) : [],
-      customFeatures: o.length ? G(o, (l) => this.fireMoreInfo(l)) : void 0
+      customFeatures: o.length ? Y(o, (l) => this.fireMoreInfo(l)) : void 0
     });
   }
 }
@@ -3052,7 +3052,7 @@ function it(s, e, t) {
   if (!s || !e?.length) return;
   let i, r;
   for (const n of e) {
-    const o = p(s, n), l = Y(o);
+    const o = p(s, n), l = V(o);
     l !== void 0 && (r === void 0 || (t === "max" ? l > r : l < r)) && (i = o, r = l);
   }
   return i ?? p(s, e[0]);
@@ -3074,7 +3074,7 @@ class Bs extends x {
     super(...arguments), this._bigKeys = ["temperature"];
   }
   static {
-    this.styles = [W, K];
+    this.styles = [W, G];
   }
   /** Level rows under the tile: roughly two per grid row. */
   contentRows() {
@@ -3138,9 +3138,19 @@ class Bs extends x {
       };
     });
   }
+  /** The icon's colour from the load, for color_by_load. */
+  _loadTint(e, t) {
+    const i = this._config, r = ["off", "not reporting", "unavailable", "unknown", "not_home"], n = e?.stateObj?.state?.toLowerCase();
+    if (e && (e.unavailable || e.missing || n && r.includes(n)))
+      return "var(--state-unavailable-color)";
+    const o = [t[1].role, t[3].role].map((a) => V(a)).filter((a) => a !== void 0);
+    if (!o.length) return "var(--state-unavailable-color)";
+    const l = Math.max(...o);
+    return l >= (i.load_high ?? 75) ? "var(--error-color, #db4437)" : l >= (i.load_medium ?? 30) ? "var(--warning-color, #ffa600)" : "var(--success-color, #4caf50)";
+  }
   _levelRow(e, t) {
     if (!t) return;
-    const i = Y(t);
+    const i = V(t);
     return {
       entityId: t.entityId,
       name: e,
@@ -3165,7 +3175,7 @@ class Bs extends x {
         e.name
       ) ?? u.entity,
       entityId: u.entity
-    })), { big: l } = X(t, this._bigKeys), a = this._freeDisk(), c = Y(a), h = [
+    })), { big: l } = X(t, this._bigKeys), a = this._freeDisk(), c = V(a), h = [
       this._levelRow(d(this.hass, "level.cpu"), t[1].role),
       this._levelRow(d(this.hass, "level.memory"), t[2].role),
       this._levelRow(d(this.hass, "level.gpu"), t[3].role),
@@ -3184,18 +3194,18 @@ class Bs extends x {
     ].filter((u) => !!u);
     return this.renderTile({
       icon: "mdi:desktop-tower-monitor",
-      color: i ? N(i.stateObj) : "var(--state-icon-color)",
+      color: e.color_by_load ? this._loadTint(i, t) : i ? N(i.stateObj) : "var(--state-icon-color)",
       primary: e.name ?? d(this.hass, "computer.title"),
       mainEntityId: i?.entityId ?? t[0].role?.entityId ?? a?.entityId,
       secondary: S([
-        U(this.hass, i),
+        z(this.hass, i),
         ...o,
         ...r.map((u) => F(this.hass, u)),
         // Load and disks are already shown as bars with their own labels.
         ...this._bigKeys.includes("temperature") ? [] : [F(this.hass, t[0].role)]
       ]),
       values: this.bigValues(l),
-      customFeatures: h.length ? G(h, (u) => this.fireMoreInfo(u)) : void 0
+      customFeatures: h.length ? Y(h, (u) => this.fireMoreInfo(u)) : void 0
     });
   }
 }
@@ -3256,7 +3266,7 @@ class qs extends x {
       primary: e.name ?? t?.stateObj?.attributes.friendly_name ?? d(this.hass, "air.title"),
       mainEntityId: t?.entityId,
       secondary: S([
-        U(this.hass, t),
+        z(this.hass, t),
         ...o,
         this.mainStateSegment(t),
         ...r.map((c) => F(this.hass, c)),
@@ -3306,7 +3316,7 @@ class Ks extends x {
     super(...arguments), this._bigKeys = ["illuminance"];
   }
   static {
-    this.styles = [W, K];
+    this.styles = [W, G];
   }
   /** One row for our own bar, plus whatever controls sit under it. */
   contentRows() {
@@ -3341,7 +3351,7 @@ class Ks extends x {
     if (n) return this.renderWarning(n);
     const { big: o, rest: l } = X(r, this._bigKeys), c = (Number(
       t?.stateObj?.attributes.supported_features ?? 0
-    ) & Vs) !== 0, h = ut(this.hass, e), u = Y(i), g = i && !c ? [
+    ) & Vs) !== 0, h = ut(this.hass, e), u = V(i), g = i && !c ? [
       {
         entityId: i.entityId,
         name: d(this.hass, "level.open"),
@@ -3356,13 +3366,13 @@ class Ks extends x {
       primary: e.name ?? t?.stateObj?.attributes.friendly_name ?? d(this.hass, "cover.title"),
       mainEntityId: t?.entityId,
       secondary: S([
-        U(this.hass, t),
+        z(this.hass, t),
         this.mainStateSegment(t),
         ...l.map((f) => F(this.hass, f.role))
       ]),
       values: this.bigValues(o),
       ownFeatures: h,
-      customFeatures: g.length ? G(g, (f) => this.fireMoreInfo(f)) : void 0
+      customFeatures: g.length ? Y(g, (f) => this.fireMoreInfo(f)) : void 0
     });
   }
 }
@@ -3479,7 +3489,7 @@ var In = Object.defineProperty, Rn = (s, e, t, i) => {
 const jn = 5;
 class Ys extends x {
   static {
-    this.styles = [W, K];
+    this.styles = [W, G];
   }
   /** Level rows under the tile: roughly two per grid row. */
   contentRows() {
@@ -3514,7 +3524,7 @@ class Ys extends x {
         r.push(f);
         continue;
       }
-      const y = Y(g);
+      const y = V(g);
       y === void 0 || y <= 0 || n.push({
         watts: y,
         row: {
@@ -3530,7 +3540,7 @@ class Ys extends x {
       ...h,
       level: l > 0 ? u / l * 100 : 0
     })), c = [
-      U(this.hass, t),
+      z(this.hass, t),
       n.length ? { text: d(this.hass, "energy.consuming", { count: n.length }) } : { text: d(this.hass, "energy.idle") },
       r.length ? { text: d(this.hass, "offline.count", { count: r.length }) } : void 0,
       i.length ? { text: d(this.hass, "list.missing", { count: i.length }) } : void 0
@@ -3542,7 +3552,7 @@ class Ys extends x {
       mainEntityId: t?.entityId ?? o[0]?.row.entityId,
       secondary: S([this.mainStateSegment(t), ...c]),
       values: t ? this.bigValues([{ key: "total", role: t }]) : [],
-      customFeatures: a.length ? G(a, (h) => this.fireMoreInfo(h)) : void 0
+      customFeatures: a.length ? Y(a, (h) => this.fireMoreInfo(h)) : void 0
     });
   }
 }
@@ -3665,7 +3675,7 @@ function ht(s) {
 }
 class Zs extends x {
   static {
-    this.styles = [W, K];
+    this.styles = [W, G];
   }
   contentRows() {
     return this.levelRows(this._config?.lights.length ?? 0) + this.fixedRows();
@@ -3720,7 +3730,7 @@ class Zs extends x {
       mainEntityId: c?.entityId,
       defaultIconAction: he(c?.entityId),
       secondary: S([
-        U(this.hass, t),
+        z(this.hass, t),
         // With nothing answering there is no "on out of" to state: the count
         // would be about lights nobody can see.
         a === 0 ? void 0 : {
@@ -3743,7 +3753,7 @@ class Zs extends x {
         }
       ],
       ownFeatures: ht(e),
-      customFeatures: G(
+      customFeatures: Y(
         u,
         (f) => this.fireMoreInfo(f)
       )
@@ -3778,7 +3788,7 @@ function dt(s) {
 }
 class Js extends x {
   static {
-    this.styles = [W, K];
+    this.styles = [W, G];
   }
   contentRows() {
     return this.levelRows(this._config?.players.length ?? 0) + this.fixedRows();
@@ -3836,7 +3846,7 @@ class Js extends x {
       mainEntityId: n.role?.entityId,
       defaultIconAction: he(n.role?.entityId),
       secondary: S([
-        U(this.hass, n.role),
+        z(this.hass, n.role),
         {
           text: r.length ? this._title(n.role) ?? d(this.hass, "media.playing", { count: r.length }) : d(this.hass, "media.idle"),
           entityId: n.role?.entityId
@@ -3851,7 +3861,7 @@ class Js extends x {
         }
       ],
       ownFeatures: dt(e),
-      customFeatures: t.length > 1 ? G(l, (a) => this.fireMoreInfo(a)) : void 0
+      customFeatures: t.length > 1 ? Y(l, (a) => this.fireMoreInfo(a)) : void 0
     });
   }
 }
@@ -3925,7 +3935,7 @@ class Qs extends x {
       mainEntityId: t?.entityId,
       defaultIconAction: he(t?.entityId),
       secondary: S([
-        U(this.hass, t),
+        z(this.hass, t),
         this.mainStateSegment(t),
         ...l.map((a) => F(this.hass, a.role)),
         ...r.map((a) => F(this.hass, a))
@@ -4040,7 +4050,7 @@ var Gn = Object.defineProperty, Yn = (s, e, t, i) => {
 };
 class tr extends x {
   static {
-    this.styles = [W, K];
+    this.styles = [W, G];
   }
   contentRows() {
     return this.levelRows(this._config?.lists.length ?? 0) + this.fixedRows();
@@ -4062,7 +4072,7 @@ class tr extends x {
     if (!this._config || !this.hass) return m;
     const e = this._config, t = p(this.hass, e.calendar), i = e.lists.map((c) => M(c)).map((c) => {
       const h = p(this.hass, c.entity);
-      return { item: c, role: h, count: Y(h) ?? 0 };
+      return { item: c, role: h, count: V(h) ?? 0 };
     }), r = this.missingRolesWarning([
       t,
       ...i.map((c) => c.role)
@@ -4081,7 +4091,7 @@ class tr extends x {
       primary: e.name ?? d(this.hass, "tasks.title"),
       mainEntityId: i[0]?.item.entity,
       secondary: S([
-        U(this.hass, t),
+        z(this.hass, t),
         { text: n ? void 0 : d(this.hass, "tasks.none") },
         t ? {
           text: a ?? d(this.hass, "tasks.noEvents"),
@@ -4095,7 +4105,7 @@ class tr extends x {
           icon: Te.tasks
         }
       ] : [],
-      customFeatures: l.length ? G(l, (c) => this.fireMoreInfo(c)) : void 0
+      customFeatures: l.length ? Y(l, (c) => this.fireMoreInfo(c)) : void 0
     });
   }
 }
@@ -4377,7 +4387,7 @@ class Ot extends x {
         target: { entity_id: e.power }
       } : t ? { action: "toggle" } : { action: "none" },
       secondary: S([
-        U(this.hass, t),
+        z(this.hass, t),
         this.mainStateSegment(t),
         ...i.map((n) => F(this.hass, n))
       ]),
@@ -4430,7 +4440,7 @@ class ir extends x {
     super(...arguments), this._bigKeys = ["power"];
   }
   static {
-    this.styles = [W, K];
+    this.styles = [W, G];
   }
   contentRows() {
     return this.levelRows(this._config?.zones?.length ?? 0) + this.fixedRows();
@@ -4501,7 +4511,7 @@ class ir extends x {
       // there is nothing on this card that is safe to toggle.
       defaultIconAction: e.switch ? he(e.switch) : { action: "none" },
       secondary: S([
-        U(this.hass, u),
+        z(this.hass, u),
         this.mainStateSegment(u === t ? t : u),
         // Who is asking is the card's whole point, so it is always said. That
         // nobody is asking is only worth a word when the boiler has no mode
@@ -4518,7 +4528,7 @@ class ir extends x {
         )
       ]),
       values: this.bigValues(X(o, this._bigKeys).big),
-      customFeatures: D.length ? G(D, (w) => this.fireMoreInfo(w)) : void 0
+      customFeatures: D.length ? Y(D, (w) => this.fireMoreInfo(w)) : void 0
     });
   }
 }
@@ -4569,7 +4579,7 @@ class nr extends x {
     super(...arguments), this._bigKeys = ["temperature"];
   }
   static {
-    this.styles = [W, K];
+    this.styles = [W, G];
   }
   contentRows() {
     return this.levelRows(this._config?.plants?.length ?? 0) + this.fixedRows();
@@ -4606,7 +4616,7 @@ class nr extends x {
         n.push(u.entity);
         continue;
       }
-      const f = Y(g), y = Rs(
+      const f = V(g), y = Rs(
         f,
         u.dry_below ?? e.dry_below ?? We,
         u.wet_above ?? e.wet_above ?? Be
@@ -4649,7 +4659,7 @@ class nr extends x {
         ...c.map((h) => F(this.hass, h.role))
       ]),
       values: this.bigValues(a),
-      customFeatures: i.length ? G(i, (h) => this.fireMoreInfo(h)) : void 0
+      customFeatures: i.length ? Y(i, (h) => this.fireMoreInfo(h)) : void 0
     });
   }
 }
@@ -4785,7 +4795,7 @@ class Pt extends x {
     super(...arguments), this._bigKeys = fs;
   }
   static {
-    this.styles = [W, K];
+    this.styles = [W, G];
   }
   contentRows() {
     return this.levelRows(this._days().length || this._wanted()) + this.fixedRows();
@@ -4929,14 +4939,14 @@ class Pt extends x {
       primary: e.name ?? i.attributes.friendly_name ?? e.weather,
       mainEntityId: e.weather,
       secondary: S([
-        U(this.hass, t),
+        z(this.hass, t),
         this.mainStateSegment(t, a),
         // A forecast the integration does not offer is worth saying out loud:
         // the card is otherwise a tile with an empty half.
         ms(i) ? void 0 : { text: d(this.hass, "weather.noForecast") }
       ]),
       values: c,
-      customFeatures: l.length ? G(l, (h) => this.fireMoreInfo(h), {
+      customFeatures: l.length ? Y(l, (h) => this.fireMoreInfo(h), {
         nameWidth: Co
       }) : void 0
     });
@@ -5311,25 +5321,25 @@ class ee extends le {
   }
 }
 ne([
-  V({ type: Number })
+  K({ type: Number })
 ], ee.prototype, "level");
 ne([
-  V({ type: Number })
+  K({ type: Number })
 ], ee.prototype, "min");
 ne([
-  V({ type: Number })
+  K({ type: Number })
 ], ee.prototype, "max");
 ne([
-  V({ type: Number })
+  K({ type: Number })
 ], ee.prototype, "step");
 ne([
-  V({ type: Number })
+  K({ type: Number })
 ], ee.prototype, "lo");
 ne([
-  V({ type: Number })
+  K({ type: Number })
 ], ee.prototype, "hi");
 ne([
-  V({ type: Boolean })
+  K({ type: Boolean })
 ], ee.prototype, "charging");
 ne([
   b()
@@ -5522,7 +5532,7 @@ class Je extends x {
       color: n ? h ? N(n.stateObj) : "var(--state-inactive-color)" : _e(a),
       primary: e.name ?? B?.attributes.friendly_name ?? d(t, "charge.title"),
       secondary: S([
-        U(t, n) ?? (w ? {
+        z(t, n) ?? (w ? {
           text: d(t, w.key, w.params),
           entityId: g ? e.force : e.switch ?? c
         } : void 0)
@@ -5700,7 +5710,7 @@ class Qe extends le {
   }
 }
 Rt([
-  V({ attribute: !1 })
+  K({ attribute: !1 })
 ], Qe.prototype, "hass");
 Rt([
   b()
@@ -6031,7 +6041,7 @@ const T = (s, e, t = []) => ({
   number: { min: s, max: e, mode: "box", unit_of_measurement: t }
 }), Do = { text: {} }, te = (s) => ({
   select: { multiple: !0, mode: "list", options: s }
-}), z = { boolean: {} };
+}), U = { boolean: {} };
 class hr extends C {
   get entityField() {
     return "temperature";
@@ -6305,7 +6315,7 @@ class fr extends C {
         selector: { entity: { multiple: !0 } }
       },
       T("status", e, [
-        { name: "levels", selector: z }
+        { name: "levels", selector: U }
       ]),
       A("status", "none")
     ];
@@ -6372,7 +6382,7 @@ class gr extends C {
       { name: "consumables", selector: { entity: { multiple: !0 } } },
       { name: "low_below", selector: q(0, 100, "%") },
       T("vacuum", e, [
-        { name: "levels", selector: z }
+        { name: "levels", selector: U }
       ]),
       A("vacuum", "none")
     ];
@@ -6626,7 +6636,7 @@ class yr extends C {
         }
       },
       T("person", e, [
-        { name: "levels", selector: z }
+        { name: "levels", selector: U }
       ]),
       A("person", "none")
     ];
@@ -6696,7 +6706,8 @@ class wr extends C {
         }
       },
       { name: "disks", selector: { entity: { multiple: !0 } } },
-      { name: "disk_rows", selector: z },
+      { name: "disk_rows", selector: U },
+      { name: "color_by_load", selector: U },
       { name: "disks_free", selector: { entity: { multiple: !0 } } },
       { name: "sensors", selector: { entity: { multiple: !0 } } },
       {
@@ -6722,7 +6733,7 @@ class wr extends C {
             }
           ])
         },
-        { name: "levels", selector: z }
+        { name: "levels", selector: U }
       ]),
       A("status", "none")
     ];
@@ -6741,6 +6752,7 @@ class wr extends C {
         disks: "Разделы диска (занято)",
         disks_free: "Разделы диска (свободно)",
         disk_rows: "Строка для каждого диска",
+        color_by_load: "Цвет по нагрузке",
         sensors: "Что ещё сказать",
         alerts: "Сообщать, когда сработало",
         big_values: "Крупно справа (не больше трёх)"
@@ -6757,6 +6769,7 @@ class wr extends C {
         disks: "Disks (used)",
         disks_free: "Disks (free)",
         disk_rows: "A row for each disk",
+        color_by_load: "Color by load (low, medium, high, offline)",
         sensors: "What else to show",
         alerts: "Report only when triggered",
         big_values: "Large on the right (up to three)"
@@ -6913,7 +6926,7 @@ class xr extends C {
             { value: "battery", label: e === "ru" ? "Заряд" : "Battery" }
           ])
         },
-        { name: "levels", selector: z }
+        { name: "levels", selector: U }
       ]),
       A("cover", "none")
     ];
@@ -7004,7 +7017,7 @@ class kr extends C {
       },
       { name: "limit", selector: q(1, 12) },
       T("total", e, [
-        { name: "levels", selector: z }
+        { name: "levels", selector: U }
       ]),
       A("total", "none")
     ];
@@ -7125,7 +7138,7 @@ class Sr extends C {
       },
       { name: "group", selector: _("light") },
       T("group", e, [
-        { name: "levels", selector: z }
+        { name: "levels", selector: U }
       ]),
       A("group", "toggle")
     ];
@@ -7188,7 +7201,7 @@ class Tr extends C {
         }
       },
       T(void 0, e, [
-        { name: "levels", selector: z }
+        { name: "levels", selector: U }
       ]),
       A(void 0, "more-info")
     ];
@@ -7325,7 +7338,7 @@ class Or extends C {
     const e = $(this.hass);
     return [
       { name: "limit", selector: q(1, 20) },
-      { name: "include_skipped", selector: z },
+      { name: "include_skipped", selector: U },
       { name: "ignore", selector: { entity: { multiple: !0, filter: { domain: "update" } } } },
       T(void 0, e),
       A(void 0, "more-info")
@@ -7368,7 +7381,7 @@ class Pr extends C {
       },
       { name: "calendar", selector: _("calendar") },
       T(void 0, e, [
-        { name: "levels", selector: z }
+        { name: "levels", selector: U }
       ]),
       A(void 0, "more-info")
     ];
@@ -7421,7 +7434,7 @@ class Ir extends C {
     return [
       { name: "alerts", required: !0, selector: { entity: { multiple: !0 } } },
       { name: "limit", selector: q(1, 20) },
-      { name: "watch_offline", selector: z },
+      { name: "watch_offline", selector: U },
       T(void 0, e),
       A(void 0, "more-info")
     ];
@@ -7494,9 +7507,9 @@ class Rr extends C {
       },
       { name: "preset_state", selector: _("input_select") },
       { name: "sensors", selector: { entity: { multiple: !0 } } },
-      { name: "preset_labels", selector: z },
+      { name: "preset_labels", selector: U },
       T("state", e, [
-        { name: "levels", selector: z }
+        { name: "levels", selector: U }
       ]),
       A("state", "toggle")
     ];
@@ -7602,7 +7615,7 @@ class jr extends C {
             { value: "energy", label: e === "ru" ? "Энергия" : "Energy" }
           ])
         },
-        { name: "levels", selector: z }
+        { name: "levels", selector: U }
       ]),
       A("mode", "more-info")
     ];
@@ -7710,7 +7723,7 @@ class Mr extends C {
             }
           ])
         },
-        { name: "levels", selector: z }
+        { name: "levels", selector: U }
       ]),
       A(void 0, "none")
     ];
@@ -7823,7 +7836,7 @@ class Nr extends C {
             }))
           )
         },
-        { name: "levels", selector: z }
+        { name: "levels", selector: U }
       ]),
       A("weather", "more-info")
     ];

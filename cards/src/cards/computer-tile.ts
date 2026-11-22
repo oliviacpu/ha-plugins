@@ -49,6 +49,15 @@ export interface ComputerTileConfig extends TileBaseConfig {
    */
   disk_rows?: boolean;
   /**
+   * Colour the icon by how hard the computer is working: green below
+   * `load_medium` (30 %), amber below `load_high` (75 %), red above, grey when
+   * the status says it's off or not reporting. The load is the busier of CPU and
+   * GPU. Without this the icon takes the status entity's own colour.
+   */
+  color_by_load?: boolean;
+  load_medium?: number;
+  load_high?: number;
+  /**
    * Disk partitions as per cent **free** — what the HA companion app for macOS
    * reports, for one. The one with the least free space is shown. A separate role
    * rather than the same one: confusing "used" with "free" means silently showing
@@ -164,6 +173,24 @@ export class HorosComputerTile extends BaseTileCard {
     });
   }
 
+  /** The icon's colour from the load, for color_by_load. */
+  private _loadTint(status: ResolvedRole | undefined, roles: KeyedRole[]): string {
+    const config = this._config!;
+    const offline = ["off", "not reporting", "unavailable", "unknown", "not_home"];
+    const state = status?.stateObj?.state?.toLowerCase();
+    if (status && (status.unavailable || status.missing || (state && offline.includes(state)))) {
+      return "var(--state-unavailable-color)";
+    }
+    const loads = [roles[1].role, roles[3].role]
+      .map((role) => numericState(role))
+      .filter((v): v is number => v !== undefined);
+    if (!loads.length) return "var(--state-unavailable-color)";
+    const load = Math.max(...loads);
+    if (load >= (config.load_high ?? 75)) return "var(--error-color, #db4437)";
+    if (load >= (config.load_medium ?? 30)) return "var(--warning-color, #ffa600)";
+    return "var(--success-color, #4caf50)";
+  }
+
   private _levelRow(
     name: string,
     role: ResolvedRole | undefined
@@ -249,7 +276,11 @@ export class HorosComputerTile extends BaseTileCard {
 
     return this.renderTile({
       icon: "mdi:desktop-tower-monitor",
-      color: status ? tileColor(status.stateObj) : "var(--state-icon-color)",
+      color: config.color_by_load
+        ? this._loadTint(status, roles)
+        : status
+          ? tileColor(status.stateObj)
+          : "var(--state-icon-color)",
       primary: config.name ?? t(this.hass, "computer.title"),
       mainEntityId:
         status?.entityId ?? roles[0].role?.entityId ?? freeDisk?.entityId,
