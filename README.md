@@ -118,6 +118,29 @@ pm25: sensor.bedroom_pm25
 big_values: [temperature]
 ```
 
+With `air_rows: true` every air measure gets a row of its own — humidity, CO₂ (`co2`),
+VOCs (`voc`), an air quality index (`aqi`) and PM2.5 — its bar coloured good, fair or
+poor, and the icon takes the colour of the worst one. A 24 h trend graph of the
+temperature comes as a feature underneath. The bands follow published scales (ASHRAE 55
+humidity, 1000/1400 ppm CO₂, the UBA TVOC levels, the US AQI, WHO PM2.5) and can be moved
+per measure with `air_bounds`:
+
+```yaml
+type: custom:horos-climate-tile
+name: Living room
+temperature: sensor.living_room_temperature
+humidity: sensor.living_room_humidity
+co2: sensor.living_room_co2
+voc: sensor.living_room_voc
+aqi: sensor.living_room_aqi
+air_rows: true
+air_bounds:
+  co2: [800, 1200]          # fair from 800 ppm, poor from 1200
+  humidity:
+    good: [35, 55]
+    fair: [30, 60]
+```
+
 ### Weather — `horos-weather-tile`
 
 ![Weather](docs/images/weather.png)

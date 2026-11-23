@@ -127,6 +127,11 @@ const RU: Dict = {
   "level.gpu": "GPU",
   "level.disk": "Диск",
   "level.diskFree": "Свободно",
+  "level.humidity": "Влажность",
+  "level.co2": "CO₂",
+  "level.voc": "ЛОС",
+  "level.aqi": "Индекс воздуха",
+  "level.pm25": "PM2.5",
   "level.open": "Открыто",
 };
 
@@ -234,6 +239,11 @@ const EN: Dict = {
   "level.gpu": "GPU",
   "level.disk": "Disk",
   "level.diskFree": "Free",
+  "level.humidity": "Humidity",
+  "level.co2": "CO₂",
+  "level.voc": "VOCs",
+  "level.aqi": "Air quality",
+  "level.pm25": "PM2.5",
   "level.open": "Open",
 };
 
