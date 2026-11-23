@@ -58,6 +58,10 @@ differs:
   strip the Russian from ours.
 - `format.ts` and `entity-item.ts` — that copy is behind ours on the charging role and
   `isCharging()`.
+- `base-tile-card.ts` — since 2026-11-23 ours shows a configured large value that has no
+  reading as "—" (with its icon) instead of dropping it, so tiles side by side keep one
+  shape. ha-smart-charging is off the host and was not updated; copy this over if it
+  comes back.
 - `levels.ts` — ours has no cutoffs. On 2026-09-23 ha-smart-charging was taken off the
   HA host (the phone and the watch reported their battery too unreliably for it to work)
   and its watch cradle became a plain automation. With it went the `number` entities the

@@ -34,6 +34,9 @@ import { ROLE_ICONS } from "./role-icons";
 import { stateActive } from "./state-color";
 import { t } from "./i18n";
 
+/** What a large value shows when its entity has no reading. */
+export const NO_READING = "—";
+
 export interface FormattedValue {
   value: string;
   unit?: string;
@@ -545,14 +548,17 @@ export abstract class BaseTileCard extends LitElement {
   ): FormattedValue[] {
     return big
       .map((item): FormattedValue | undefined => {
-        const formatted = this.formatted(item.role?.stateObj);
-        return formatted
-          ? {
-              ...formatted,
-              entityId: item.role?.entityId,
-              icon: icons[item.key],
-            }
-          : undefined;
+        // Not configured: nothing to say, and no slot.
+        if (!item.role) return undefined;
+        const formatted = this.formatted(item.role.stateObj);
+        // Configured but without a reading: a dash in the same place, so two
+        // tiles side by side keep the same shape when one of them has nothing
+        // to report — a missing value read as a missing feature.
+        return {
+          ...(formatted ?? { value: NO_READING }),
+          entityId: item.role.entityId,
+          icon: icons[item.key],
+        };
       })
       .filter((value): value is FormattedValue => !!value);
   }
