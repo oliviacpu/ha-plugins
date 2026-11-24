@@ -42,3 +42,20 @@ describe("schedule clock", () => {
     expect(formatClock(hass({ "input_datetime.x": "unknown" }), "input_datetime.x")).toBeUndefined();
   });
 });
+
+import { orderedModes } from "../src/cards/ac-modes-dialog";
+
+describe("modes popup order", () => {
+  it("puts off at the bottom and climbs from it", () => {
+    expect(orderedModes(["off", "heat", "cool", "heat_cool"])).toEqual([
+      "heat_cool",
+      "cool",
+      "heat",
+      "off",
+    ]);
+  });
+  it("keeps a mode it doesn't know above off", () => {
+    expect(orderedModes(["off", "eco", "heat"])).toEqual(["heat", "eco", "off"]);
+    expect(orderedModes(undefined)).toEqual([]);
+  });
+});

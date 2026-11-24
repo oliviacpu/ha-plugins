@@ -38,6 +38,8 @@ export interface HomeAssistant {
     string,
     { device_id?: string; area_id?: string; hidden?: boolean }
   >;
+  /** The area registry: an area's name, for a dialog's subtitle. */
+  areas?: Record<string, { name?: string }>;
   /** The device registry: names for grouping, areas for placing. */
   devices?: Record<
     string,

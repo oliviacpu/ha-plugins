@@ -1,5 +1,4 @@
 import { html, nothing } from "lit";
-import { css } from "lit";
 import { query, state } from "lit/decorators.js";
 import { BaseTileCard, type TileBaseConfig } from "../core/base-tile-card";
 import { tileColor } from "../core/state-color";
@@ -21,6 +20,7 @@ import { renderLevels, levelStyles } from "../core/levels";
 import { airBounds, type AirBounds } from "../core/air-quality";
 import { AIR_ROWS, airLevelRows, airRowCount } from "../core/air-rows";
 import { renderSchedule, scheduleStyles, type SchedulePeriod } from "../core/schedule-row";
+import { modesDialogStyles, renderModesDialog } from "./ac-modes-dialog";
 import {
   areaOf,
   byClass,
@@ -79,9 +79,10 @@ export interface AcTileConfig extends TileBaseConfig {
    */
   schedule?: SchedulePeriod[];
   /**
-   * A tap on the icon opens the unit's modes, and only them, in a small popup
-   * — the mode buttons without the whole climate dialog, and without a row of
-   * them taking the card's height the rest of the time.
+   * A tap on the icon opens the unit's modes, and only them, in a popup laid
+   * out like the stock more-info dialog: the mode large, and a tall control
+   * with off at the bottom. Without the whole climate dialog, and without a
+   * row of mode buttons taking the card's height the rest of the time.
    */
   modes_popup?: boolean;
 }
@@ -121,43 +122,17 @@ export class HorosAcTile extends BaseTileCard {
     tileStyles,
     levelStyles,
     scheduleStyles,
-    css`
-      dialog.modes {
-        border: none;
-        padding: var(--ha-space-3, 12px);
-        width: min(420px, calc(100vw - 32px));
-        border-radius: var(--ha-card-border-radius, 12px);
-        background: var(--card-background-color, var(--ha-card-background, #fff));
-        color: var(--primary-text-color);
-        box-shadow: var(--ha-card-box-shadow, 0 8px 24px rgba(0, 0, 0, 0.24));
-      }
-      dialog.modes::backdrop {
-        background: rgba(0, 0, 0, 0.32);
-      }
-    `,
+    modesDialogStyles,
   ];
 
   @state() private _config?: AcTileConfig;
 
   @query("dialog.modes") private _modes?: HTMLDialogElement;
 
-  /** The mode the popup was opened on: a different one means a choice was made. */
-  private _modeAtOpen?: string;
-
   protected override iconTap(): boolean {
     if (!this._config?.modes_popup || !this._modes) return false;
-    this._modeAtOpen = this.hass?.states[this._config.climate]?.state;
     this._modes.showModal();
     return true;
-  }
-
-  protected override updated(changed: Map<string, unknown>): void {
-    super.updated?.(changed);
-    // A mode picked is the whole point of the popup; it closes on its own.
-    const mode = this._config ? this.hass?.states[this._config.climate]?.state : undefined;
-    if (this._modes?.open && this._modeAtOpen !== undefined && mode !== this._modeAtOpen) {
-      this._modes.close();
-    }
   }
 
   private _bigKeys: string[] = ["temperature"];
@@ -277,13 +252,12 @@ export class HorosAcTile extends BaseTileCard {
           if (ev.target === ev.currentTarget) this._modes?.close();
         }}
       >
-        <hui-card-features
-          .hass=${this.hass}
-          .context=${{ entity_id: config.climate }}
-          .color=${this.base.color}
-          .features=${[{ type: "climate-hvac-modes" }]}
-          .position=${"bottom"}
-        ></hui-card-features>
+        ${renderModesDialog(
+          this.hass,
+          climate?.stateObj,
+          cardName(config.name, climate) ?? t(this.hass, "ac.title"),
+          () => this._modes?.close()
+        )}
       </dialog>`;
   }
 }
