@@ -159,6 +159,11 @@ invisible on a dark theme, a grey ripple, a tap target missed by a few pixels).
 
 Rakes already stepped on:
 
+- Marketplace can install the commit *before* the one just pushed if `repository/refresh`
+  runs right after `git push`: the resource then carries the new hash with the old file,
+  and browsers cache that pair. Wait until `gh api repos/oliviacpu/ha-plugins/commits/main`
+  shows the new sha before refreshing, and check the installed file (2026-11-24).
+
 - A dashboard served from the dev server has to be opened over **http**, otherwise the
   browser blocks the http module as mixed content.
 - Reloading means F5 only: a registered custom element cannot be redefined, which is why
