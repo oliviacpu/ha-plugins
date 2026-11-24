@@ -10,6 +10,8 @@ export interface PlayerCardConfig {
   /** The media player: a TV, a room's player, a speaker. */
   entity: string;
   name?: string;
+  /** Shown when there is no artwork; the player's own icon by default. */
+  icon?: string;
 }
 
 /** media_player supported_features bits, as in HA's MediaPlayerEntityFeature. */
@@ -178,6 +180,7 @@ export class HorosPlayerCard extends LitElement {
         said(attrs.source) ??
         "");
     const kindIcon =
+      this._config.icon ??
       (attrs.icon as string) ??
       (attrs.device_class === "speaker"
         ? "mdi:speaker"
@@ -414,8 +417,12 @@ export class HorosPlayerCard extends LitElement {
       --mdc-icon-button-size: 36px;
     }
 
+    /* Where the mute button would be, so every volume bar starts in one place. */
     .vol-icon {
-      padding: 0 var(--ha-space-2, 8px);
+      flex: none;
+      display: flex;
+      justify-content: center;
+      width: var(--mdc-icon-button-size, 36px);
     }
 
     ha-slider.progress {

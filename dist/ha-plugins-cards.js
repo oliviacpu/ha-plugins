@@ -6196,7 +6196,7 @@ class Ne extends ne {
     const e = this.hass.states[this._config.entity];
     if (!e)
       return f`<ha-card><div class="warning">${this._config.entity}</div></ha-card>`;
-    const t = e.attributes, i = Number(t.supported_features ?? 0), r = Sa.has(e.state), n = e.state === "playing", o = r ? void 0 : t.entity_picture, l = this._config.name ?? t.friendly_name ?? this._config.entity, a = r ? this.hass.formatEntityState(e) : t.media_title ?? this.hass.formatEntityState(e), c = (I) => typeof I == "string" && I && !["unknown", "unavailable", "none"].includes(I.toLowerCase()) ? I : void 0, h = r ? "" : c(t.media_artist) ?? c(t.media_series_title) ?? c(t.app_name) ?? c(t.source) ?? "", u = t.icon ?? (t.device_class === "speaker" ? "mdi:speaker" : t.device_class === "receiver" ? "mdi:audio-video" : "mdi:television"), v = this._colour, g = v ? `rgb(${v.join(",")})` : r ? "var(--card-background-color, var(--ha-card-background))" : "var(--primary-color)", w = v ? fa(v) < 0.4 : !r, L = r && !v ? "var(--primary-text-color)" : w ? "#fff" : "#000", y = (I, X, ee, Le) => Le ? f`<ha-icon-button .label=${X} @click=${() => this._call(ee)}>
+    const t = e.attributes, i = Number(t.supported_features ?? 0), r = Sa.has(e.state), n = e.state === "playing", o = r ? void 0 : t.entity_picture, l = this._config.name ?? t.friendly_name ?? this._config.entity, a = r ? this.hass.formatEntityState(e) : t.media_title ?? this.hass.formatEntityState(e), c = (I) => typeof I == "string" && I && !["unknown", "unavailable", "none"].includes(I.toLowerCase()) ? I : void 0, h = r ? "" : c(t.media_artist) ?? c(t.media_series_title) ?? c(t.app_name) ?? c(t.source) ?? "", u = this._config.icon ?? t.icon ?? (t.device_class === "speaker" ? "mdi:speaker" : t.device_class === "receiver" ? "mdi:audio-video" : "mdi:television"), v = this._colour, g = v ? `rgb(${v.join(",")})` : r ? "var(--card-background-color, var(--ha-card-background))" : "var(--primary-color)", w = v ? fa(v) < 0.4 : !r, L = r && !v ? "var(--primary-text-color)" : w ? "#fff" : "#000", y = (I, X, ee, Le) => Le ? f`<ha-icon-button .label=${X} @click=${() => this._call(ee)}>
             <ha-icon icon=${I}></ha-icon>
           </ha-icon-button>` : m;
     return f`
@@ -6397,8 +6397,12 @@ class Ne extends ne {
       --mdc-icon-button-size: 36px;
     }
 
+    /* Where the mute button would be, so every volume bar starts in one place. */
     .vol-icon {
-      padding: 0 var(--ha-space-2, 8px);
+      flex: none;
+      display: flex;
+      justify-content: center;
+      width: var(--mdc-icon-button-size, 36px);
     }
 
     ha-slider.progress {
@@ -8818,13 +8822,14 @@ class Qi extends Fe {
         required: !0,
         selector: { entity: { filter: { domain: "media_player" } } }
       },
-      { name: "name", selector: Ei }
+      { name: "name", selector: Ei },
+      { name: "icon", selector: { icon: {} } }
     ];
   }
   get labels() {
     return this.pick({
-      ru: { ...S, entity: "Проигрыватель", name: "Название" },
-      en: { ...T, entity: "Media player", name: "Name" }
+      ru: { ...S, entity: "Проигрыватель", name: "Название", icon: "Значок" },
+      en: { ...T, entity: "Media player", name: "Name", icon: "Icon" }
     });
   }
 }

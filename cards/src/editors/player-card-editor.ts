@@ -16,13 +16,14 @@ export class HorosPlayerCardEditor extends FormCardEditor {
         selector: { entity: { filter: { domain: "media_player" } } },
       },
       { name: "name", selector: textSelector },
+      { name: "icon", selector: { icon: {} } },
     ];
   }
 
   protected get labels(): Record<string, string> {
     return this.pick({
-      ru: { ...COMMON_LABELS_RU, entity: "Проигрыватель", name: "Название" },
-      en: { ...COMMON_LABELS_EN, entity: "Media player", name: "Name" },
+      ru: { ...COMMON_LABELS_RU, entity: "Проигрыватель", name: "Название", icon: "Значок" },
+      en: { ...COMMON_LABELS_EN, entity: "Media player", name: "Name", icon: "Icon" },
     });
   }
 }
