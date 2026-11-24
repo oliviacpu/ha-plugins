@@ -4100,6 +4100,7 @@ const co = Q`
   }
 
   .schedule .period {
+    container-type: inline-size;
     display: flex;
     align-items: center;
     gap: var(--ha-space-1, 4px);
@@ -4153,6 +4154,17 @@ const co = Q`
     font-size: var(--ha-font-size-m, 14px);
     font-weight: var(--ha-font-weight-medium, 500);
     font-variant-numeric: tabular-nums;
+  }
+
+  /*
+   * Half of a narrow card has no room for "10:00 PM" beside a stepper: a
+   * clipped "1(" says less than nothing. The icon stays and still opens the
+   * time's dialog.
+   */
+  @container (max-width: 190px) {
+    .schedule .when span {
+      display: none;
+    }
   }
 
   .ac-stack {
@@ -4257,7 +4269,8 @@ class jt extends x {
       color: N(t?.stateObj),
       primary: Ze(e.name, t) ?? d(this.hass, "ac.title"),
       mainEntityId: t?.entityId,
-      defaultIconAction: he(t?.entityId),
+      // The popup needs a tappable icon; the tap itself goes to iconTap().
+      defaultIconAction: e.modes_popup ? { action: "more-info" } : he(t?.entityId),
       secondary: S([
         z(this.hass, t),
         this.mainStateSegment(t),

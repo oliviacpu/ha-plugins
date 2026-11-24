@@ -243,7 +243,10 @@ export class HorosAcTile extends BaseTileCard {
       color: tileColor(climate?.stateObj),
       primary: cardName(config.name, climate) ?? t(this.hass, "ac.title"),
       mainEntityId: climate?.entityId,
-      defaultIconAction: defaultIconAction(climate?.entityId),
+      // The popup needs a tappable icon; the tap itself goes to iconTap().
+      defaultIconAction: config.modes_popup
+        ? { action: "more-info" }
+        : defaultIconAction(climate?.entityId),
       secondary: composeSegments([
         unavailableSegment(this.hass, climate),
         this.mainStateSegment(climate),

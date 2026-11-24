@@ -136,6 +136,7 @@ export const scheduleStyles = css`
   }
 
   .schedule .period {
+    container-type: inline-size;
     display: flex;
     align-items: center;
     gap: var(--ha-space-1, 4px);
@@ -189,6 +190,17 @@ export const scheduleStyles = css`
     font-size: var(--ha-font-size-m, 14px);
     font-weight: var(--ha-font-weight-medium, 500);
     font-variant-numeric: tabular-nums;
+  }
+
+  /*
+   * Half of a narrow card has no room for "10:00 PM" beside a stepper: a
+   * clipped "1(" says less than nothing. The icon stays and still opens the
+   * time's dialog.
+   */
+  @container (max-width: 190px) {
+    .schedule .when span {
+      display: none;
+    }
   }
 
   .ac-stack {
