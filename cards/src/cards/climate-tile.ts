@@ -5,24 +5,14 @@ import { tileColor } from "../core/state-color";
 import {
   cardName,
   composeSegments,
-  formatRole,
-  numericState,
   resolveRole,
   roleSegment,
   unavailableSegment,
 } from "../core/format";
 import { tileStyles } from "../core/tile-styles";
-import { renderLevels, levelStyles, type LevelRow } from "../core/levels";
-import {
-  AIR_COLOR,
-  airBounds,
-  airScaleMax,
-  airStatus,
-  worstAirStatus,
-  type AirBounds,
-  type AirMeasure,
-} from "../core/air-quality";
-import { t } from "../core/i18n";
+import { renderLevels, levelStyles } from "../core/levels";
+import { AIR_COLOR, airBounds, type AirBounds } from "../core/air-quality";
+import { AIR_ROWS, airLevelRows, airRowCount, worstAir } from "../core/air-rows";
 import type { HomeAssistant } from "../core/types";
 import { resolveBigKeys, splitRoles, type KeyedRole } from "../core/big-values";
 import { defaultIconAction } from "../core/actions";
@@ -41,8 +31,7 @@ export const CLIMATE_ROLES = [
 
 export type ClimateRole = (typeof CLIMATE_ROLES)[number];
 
-/** The measures that get a row with `air_rows`, in this order. */
-export const AIR_ROWS: AirMeasure[] = ["humidity", "co2", "voc", "aqi", "pm25"];
+export { AIR_ROWS };
 
 export interface ClimateTileConfig extends TileBaseConfig {
   type: string;
@@ -91,39 +80,12 @@ export class HorosClimateTile extends BaseTileCard {
 
   protected override contentRows(): number {
     const config = this._config;
-    const rows = config?.air_rows
-      ? AIR_ROWS.filter((measure) => config[measure]).length
-      : 0;
+    const rows = config?.air_rows ? airRowCount(config) : 0;
     return this.levelRows(rows) + this.fixedRows();
   }
 
   protected override fixedRows(): number {
     return this.featureRows(climateFeatures(this.hass, this._config));
-  }
-
-  /** One row per configured air measure, coloured by its band. */
-  private _airRows(bounds: AirBounds): LevelRow[] {
-    const config = this._config!;
-    return AIR_ROWS.filter((measure) => config[measure]).flatMap((measure) => {
-      const role = resolveRole(this.hass, config[measure]);
-      if (!role) return [];
-      const value = numericState(role);
-      const status = airStatus(measure, value, bounds);
-      return [
-        {
-          entityId: role.entityId,
-          name: t(this.hass, `level.${measure}`),
-          text: formatRole(this.hass, role) ?? t(this.hass, "value.unknown"),
-          ink: AIR_COLOR[status],
-          level:
-            value === undefined
-              ? 0
-              : (Math.max(0, value) / airScaleMax(measure, bounds)) * 100,
-          alarm: status === "poor",
-          alarmIcon: "mdi:alert-circle",
-        },
-      ];
-    });
   }
 
   private _bigKeys: string[] = ["temperature"];
@@ -173,16 +135,12 @@ export class HorosClimateTile extends BaseTileCard {
     const main = roles[0].role;
 
     const bounds = airBounds(config.air_bounds);
-    const airRows = config.air_rows ? this._airRows(bounds) : [];
+    const airRows = config.air_rows ? airLevelRows(this.hass, config, bounds) : [];
     // A measure with a row of its own is not repeated on the line.
     const line = config.air_rows
       ? rest.filter((item) => !(AIR_ROWS as string[]).includes(item.key))
       : rest;
-    const worst = worstAirStatus(
-      AIR_ROWS.filter((measure) => config[measure]).map((measure) =>
-        airStatus(measure, numericState(resolveRole(this.hass, config[measure])), bounds)
-      )
-    );
+    const worst = worstAir(this.hass, config, bounds);
 
     return this.renderTile({
       icon: config.air_rows ? "mdi:home-thermometer" : "mdi:thermometer",

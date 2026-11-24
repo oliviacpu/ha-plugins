@@ -302,6 +302,21 @@ humidity: sensor.living_room_humidity
 power: sensor.ac_plug_power
 ```
 
+A thermostat that measures the air as well — `co2`, `voc`, `aqi`, `pm25` — takes the same
+`air_rows: true` as the room tile: a row per measure, coloured good, fair or poor, under
+the target. The thermostat and its room's air are then one card.
+
+```yaml
+type: custom:horos-ac-tile
+climate: climate.thermostat
+humidity: sensor.thermostat_humidity
+co2: sensor.thermostat_carbon_dioxide
+voc: sensor.thermostat_volatile_organic_compounds
+air_rows: true
+features:
+  - type: target-temperature
+```
+
 ### Heating — `horos-heating-tile`
 
 ![Heating](docs/images/heating.png)

@@ -15,6 +15,10 @@ import { defaultIconAction } from "../core/actions";
 import type { LovelaceCardEditor } from "../core/types";
 import { registerCard } from "../core/register";
 import { t } from "../core/i18n";
+import { tileStyles } from "../core/tile-styles";
+import { renderLevels, levelStyles } from "../core/levels";
+import { airBounds, type AirBounds } from "../core/air-quality";
+import { AIR_ROWS, airLevelRows, airRowCount } from "../core/air-rows";
 import {
   areaOf,
   byClass,
@@ -39,6 +43,21 @@ export interface AcTileConfig extends TileBaseConfig {
   humidity?: string;
   /** What it costs to run: the plug the unit is on. */
   power?: string;
+  /** Carbon dioxide, ppm. Only drawn with `air_rows`. */
+  co2?: string;
+  /** Volatile organic compounds, µg/m³. Only drawn with `air_rows`. */
+  voc?: string;
+  /** An air quality index, on the US scale. Only drawn with `air_rows`. */
+  aqi?: string;
+  pm25?: string;
+  /**
+   * The air of the room the unit keeps, a row per measure — humidity, CO₂,
+   * VOC, AQI, PM2.5 — coloured good, fair or poor, as on the room tile. A
+   * thermostat with air sensors of its own is then the whole room in one card.
+   */
+  air_rows?: boolean;
+  /** Where fair and poor start, per measure; see core/air-quality.ts. */
+  air_bounds?: Partial<AirBounds>;
   /** Anything else worth a word: mode, fan speed, filter. */
   sensors?: (EntityItem | string)[];
   /** @deprecated Removed in the Features panel instead. */
@@ -81,6 +100,8 @@ export function acFeatures(
  * to "should I leave it running" is a number in watts.
  */
 export class HorosAcTile extends BaseTileCard {
+  static styles = [tileStyles, levelStyles];
+
   @state() private _config?: AcTileConfig;
 
   private _bigKeys: string[] = ["temperature"];
@@ -118,6 +139,12 @@ export class HorosAcTile extends BaseTileCard {
     return this.featureRows(acFeatures(this._config));
   }
 
+  protected override contentRows(): number {
+    const config = this._config;
+    const rows = config?.air_rows ? airRowCount(config) : 0;
+    return this.levelRows(rows) + this.fixedRows();
+  }
+
   protected render() {
     if (!this._config || !this.hass) return nothing;
     const config = this._config;
@@ -134,11 +161,21 @@ export class HorosAcTile extends BaseTileCard {
     const warning = this.missingRolesWarning([
       climate,
       ...roles.map((item) => item.role),
+      ...(["co2", "voc", "aqi", "pm25"] as const).map((key) =>
+        resolveRole(this.hass, config[key])
+      ),
       ...extras,
     ]);
     if (warning) return this.renderWarning(warning);
 
     const { big, rest } = splitRoles(roles, this._bigKeys);
+    const airRows = config.air_rows
+      ? airLevelRows(this.hass, config, airBounds(config.air_bounds))
+      : [];
+    // A measure with a row of its own is not repeated on the line.
+    const line = config.air_rows
+      ? rest.filter((item) => !(AIR_ROWS as string[]).includes(item.key))
+      : rest;
 
     return this.renderTile({
       icon: "mdi:air-conditioner",
@@ -149,11 +186,14 @@ export class HorosAcTile extends BaseTileCard {
       secondary: composeSegments([
         unavailableSegment(this.hass, climate),
         this.mainStateSegment(climate),
-        ...rest.map((item) => roleSegment(this.hass, item.role)),
+        ...line.map((item) => roleSegment(this.hass, item.role)),
         ...extras.map((extra) => roleSegment(this.hass, extra)),
       ]),
       values: this.bigValues(big),
       ownFeatures: acFeatures(config),
+      customFeatures: airRows.length
+        ? renderLevels(airRows, (entityId) => this.fireMoreInfo(entityId))
+        : undefined,
     });
   }
 }

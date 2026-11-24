@@ -6,6 +6,7 @@ import {
   interactionsSection,
   entitySelector,
   bigValuesSelector,
+  booleanSelector,
   type SchemaItem,
 } from "./base-editor";
 import { languageOf } from "../core/i18n";
@@ -26,6 +27,14 @@ export class HorosAcTileEditor extends BaseCardEditor {
       { name: "temperature", selector: entitySelector("sensor", "temperature") },
       { name: "humidity", selector: entitySelector("sensor", "humidity") },
       { name: "power", selector: entitySelector("sensor", "power") },
+      { name: "co2", selector: entitySelector("sensor", "carbon_dioxide") },
+      {
+        name: "voc",
+        selector: entitySelector("sensor", "volatile_organic_compounds"),
+      },
+      { name: "aqi", selector: entitySelector("sensor", "aqi") },
+      { name: "pm25", selector: entitySelector("sensor", "pm25") },
+      { name: "air_rows", selector: booleanSelector },
       { name: "sensors", selector: { entity: { multiple: true } } },
       contentSection("climate", lang, [
         {
@@ -59,6 +68,11 @@ export class HorosAcTileEditor extends BaseCardEditor {
         temperature: "Температура в комнате",
         humidity: "Влажность в комнате",
         power: "Мощность",
+        co2: "CO₂",
+        voc: "Летучие органические соединения",
+        aqi: "Индекс качества воздуха",
+        pm25: "PM2.5",
+        air_rows: "Строки качества воздуха (хорошо, так себе, плохо)",
         sensors: "Что ещё сказать",
         big_values: "Крупно справа (не больше трёх)",
       },
@@ -69,6 +83,11 @@ export class HorosAcTileEditor extends BaseCardEditor {
         temperature: "Room temperature",
         humidity: "Room humidity",
         power: "Power",
+        co2: "CO₂",
+        voc: "VOCs",
+        aqi: "Air quality index",
+        pm25: "PM2.5",
+        air_rows: "Air quality rows (good, fair, poor)",
         sensors: "What else to show",
         big_values: "Large on the right (up to three)",
       },
