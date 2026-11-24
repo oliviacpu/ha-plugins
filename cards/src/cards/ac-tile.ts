@@ -1,4 +1,4 @@
-import { nothing } from "lit";
+import { html, nothing } from "lit";
 import { state } from "lit/decorators.js";
 import { BaseTileCard, type TileBaseConfig } from "../core/base-tile-card";
 import { tileColor } from "../core/state-color";
@@ -19,6 +19,7 @@ import { tileStyles } from "../core/tile-styles";
 import { renderLevels, levelStyles } from "../core/levels";
 import { airBounds, type AirBounds } from "../core/air-quality";
 import { AIR_ROWS, airLevelRows, airRowCount } from "../core/air-rows";
+import { renderSchedule, scheduleStyles, type SchedulePeriod } from "../core/schedule-row";
 import {
   areaOf,
   byClass,
@@ -67,6 +68,15 @@ export interface AcTileConfig extends TileBaseConfig {
    * the target temperature sits in the line, which then has no room for it.
    */
   big_values?: AcRole[];
+  /**
+   * The schedule the unit follows, a period per entry — day, then night — each
+   * with the time it starts (an `input_datetime`, tap for its picker) and a
+   * stepper for the temperature it holds (an `input_number` the schedule
+   * reads). For a thermostat run by an automation from helpers: the helpers
+   * are what to change, not the unit's own target, which the schedule would
+   * take for a hold.
+   */
+  schedule?: SchedulePeriod[];
 }
 
 /**
@@ -100,7 +110,7 @@ export function acFeatures(
  * to "should I leave it running" is a number in watts.
  */
 export class HorosAcTile extends BaseTileCard {
-  static styles = [tileStyles, levelStyles];
+  static styles = [tileStyles, levelStyles, scheduleStyles];
 
   @state() private _config?: AcTileConfig;
 
@@ -135,8 +145,13 @@ export class HorosAcTile extends BaseTileCard {
     this._config = config;
   }
 
+  /** The schedule row is a control: one layout row, never squeezed. */
+  private _scheduleRows(): number {
+    return this._config?.schedule?.length ? 1 : 0;
+  }
+
   protected override fixedRows(): number {
-    return this.featureRows(acFeatures(this._config));
+    return this.featureRows(acFeatures(this._config)) + this._scheduleRows();
   }
 
   protected override contentRows(): number {
@@ -191,9 +206,17 @@ export class HorosAcTile extends BaseTileCard {
       ]),
       values: this.bigValues(big),
       ownFeatures: acFeatures(config),
-      customFeatures: airRows.length
-        ? renderLevels(airRows, (entityId) => this.fireMoreInfo(entityId))
-        : undefined,
+      customFeatures:
+        airRows.length || config.schedule?.length
+          ? html`<div class="ac-stack">
+              ${airRows.length
+                ? renderLevels(airRows, (entityId) => this.fireMoreInfo(entityId))
+                : nothing}
+              ${renderSchedule(this.hass, config.schedule ?? [], (entityId) =>
+                this.fireMoreInfo(entityId)
+              )}
+            </div>`
+          : undefined,
     });
   }
 }
