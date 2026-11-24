@@ -255,8 +255,17 @@ export abstract class BaseTileCard extends LitElement {
     this._runAction(ev.detail.action as ActionType, true);
   }
 
+  /**
+   * A tap on the icon that the card handles itself — a popup of its own, say.
+   * Returns true when it did, and the configured icon action is then skipped.
+   */
+  protected iconTap(): boolean {
+    return false;
+  }
+
   private _runAction(action: ActionType, fromIcon: boolean): void {
     if (!this.hass) return;
+    if (fromIcon && action === "tap" && this.iconTap()) return;
     const config = fromIcon
       ? {
           entity: this._entityId,

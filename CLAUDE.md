@@ -62,6 +62,7 @@ differs:
   reading as "—" (with its icon) instead of dropping it, so tiles side by side keep one
   shape. ha-smart-charging is off the host and was not updated; copy this over if it
   comes back.
+- `base-tile-card.ts` also has, since 2026-11-24, a protected `iconTap()` hook a card overrides to handle the icon tap itself (the AC tile's `modes_popup`); copy it over with the rest.
 - `levels.ts` — since 2026-11-24 ours draws every row glyph after the label (see
   Conventions); copy that over if ha-smart-charging comes back. Also, ours has no cutoffs. On 2026-09-23 ha-smart-charging was taken off the
   HA host (the phone and the watch reported their battery too unreliably for it to work)
