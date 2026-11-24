@@ -59,17 +59,3 @@ describe("modes popup order", () => {
     expect(orderedModes(undefined)).toEqual([]);
   });
 });
-
-import { averageColour, luminance } from "../src/cards/player-colour";
-
-describe("player card colour", () => {
-  it("averages the picture without its black bars and glare", () => {
-    const px = [10, 10, 10, 255, 250, 250, 250, 255, 200, 40, 40, 255, 100, 20, 20, 255];
-    expect(averageColour(px)).toEqual([150, 30, 30]);
-    expect(averageColour([0, 0, 0, 255])).toBeUndefined();
-  });
-  it("tells light from dark", () => {
-    expect(luminance([255, 255, 255])).toBeCloseTo(1);
-    expect(luminance([20, 20, 60])).toBeLessThan(0.4);
-  });
-});

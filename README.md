@@ -288,9 +288,10 @@ players:
 
 ### Player — `horos-player-card`
 
-The stock media card — artwork fading into a colour taken from it, the title, the playback
-buttons — with the volume slider (and mute) in the same card. For a TV whose sound comes
-out of a soundbar, point it at a universal player that has both. (Screenshot to come.)
+HA's own media control card, ported line for line — the artwork, the colours it picks from
+it, the buttons, the progress bar — with a volume bar (and mute) at the end of the button
+row. For a TV whose sound comes out of a soundbar, point it at a universal player that has
+both. (Screenshot to come.)
 
 ```yaml
 type: custom:horos-player-card

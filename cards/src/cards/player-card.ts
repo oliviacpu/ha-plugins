@@ -1,51 +1,71 @@
 import { css, html, LitElement, nothing, type PropertyValues } from "lit";
-import { property, state } from "lit/decorators.js";
-import type { HomeAssistant, LovelaceCardEditor } from "../core/types";
+import { property, query, state } from "lit/decorators.js";
+import { classMap } from "lit/directives/class-map.js";
+import { styleMap } from "lit/directives/style-map.js";
+import { Vibrant } from "node-vibrant/browser";
+import type { HassEntity, HomeAssistant, LovelaceCardEditor } from "../core/types";
 import { registerCard } from "../core/register";
 import { ensureTileInternals } from "../core/ha-internals";
-import { averageColour, luminance } from "./player-colour";
+import { hex, pickColours } from "./player-colour";
+import {
+  cleanupMediaTitle,
+  currentProgress,
+  Feature,
+  hasProgress,
+  isActive,
+  mediaControls,
+  mediaDescription,
+  supports,
+} from "./player-media";
 
 export interface PlayerCardConfig {
   type: string;
   /** The media player: a TV, a room's player, a speaker. */
   entity: string;
   name?: string;
-  /** Shown when there is no artwork; the player's own icon by default. */
-  icon?: string;
 }
 
-/** media_player supported_features bits, as in HA's MediaPlayerEntityFeature. */
-const PAUSE = 1;
-const VOLUME_SET = 4;
-const VOLUME_MUTE = 8;
-const SEEK = 2;
-const PREVIOUS = 16;
-const NEXT = 32;
-const TURN_ON = 128;
-const TURN_OFF = 256;
-const PLAY = 16384;
-
-const OFF_STATES = new Set(["off", "unavailable", "unknown", "standby"]);
+interface Slider extends HTMLElement {
+  value: number;
+}
 
 /**
- * The stock media-control card — artwork bleeding into a colour taken from it,
- * the title, the playback buttons — with the one thing it leaves out: volume,
- * as the stock slider feature, in the same card. A TV and its soundbar are one
- * thing in the room, and their volume belongs on the card that shows the show.
+ * HA's own media control card, line for line, with the one thing it leaves
+ * out: a volume bar. The stock card is not extensible — no features, no slot —
+ * and its markup cannot be reached from outside without reaching into its
+ * shadow root, so this is a port of its render and styles (frontend:
+ * src/panels/lovelace/cards/hui-media-control-card.ts) rather than a wrapper.
+ * Keep it a port: any difference from the stock card other than the volume
+ * is a defect. The browse and join buttons are left to the more-info dialog,
+ * which the dots open.
  */
 export class HorosPlayerCard extends LitElement {
   @property({ attribute: false }) public hass?: HomeAssistant;
 
   @state() private _config?: PlayerCardConfig;
 
-  @state() private _colour?: number[];
+  @state() private _foregroundColor?: string;
 
-  @state() private _ready = false;
+  @state() private _backgroundColor?: string;
 
-  private _picture?: string;
+  @state() private _narrow = false;
 
-  /** Progress moves with the clock between state updates, as on the stock card. */
-  private _tick?: ReturnType<typeof setInterval>;
+  @state() private _veryNarrow = false;
+
+  @state() private _cardHeight = 0;
+
+  @state() private _marqueeActive = false;
+
+  @state() private _marquee = false;
+
+  @query("ha-slider.progress") private _progressBar?: Slider;
+
+  private _image?: string;
+
+  private _resizeObserver?: ResizeObserver;
+
+  /** Moves the progress bar between state updates, as the stock card's controller does. */
+  private _interval?: ReturnType<typeof setInterval>;
 
   public static async getConfigElement(): Promise<LovelaceCardEditor> {
     await import("../editors/player-card-editor");
@@ -58,92 +78,325 @@ export class HorosPlayerCard extends LitElement {
   }
 
   public setConfig(config: PlayerCardConfig): void {
-    if (!config.entity) throw new Error("A media player is required (entity)");
+    if (!config.entity || config.entity.split(".")[0] !== "media_player") {
+      throw new Error("Specify an entity from within the media_player domain");
+    }
     this._config = config;
+    void this.updateComplete.then(() => this._measureCard());
   }
 
   public getCardSize(): number {
-    return 4;
-  }
-
-  public getGridOptions() {
-    // As tall as what is in it, like the stock media card: a fixed minimum
-    // made the slot shorter than the card, and its bottom corners spilled out.
-    return { columns: 12, rows: "auto", min_columns: 6 };
+    return 3;
   }
 
   public connectedCallback(): void {
     super.connectedCallback();
-    // ha-slider and ha-icon-button are registered by the stock cards' bundle;
-    // wait for it before drawing the bars.
-    void ensureTileInternals().then((ok) => (this._ready = ok));
-    this._tick = setInterval(() => {
-      const s = this._config ? this.hass?.states[this._config.entity] : undefined;
-      if (s?.state === "playing" && s.attributes.media_duration) this.requestUpdate();
-    }, 1000);
+    void ensureTileInternals().then(() => this.requestUpdate());
+    if (this._config) void loadMarquee(this._config.entity).then((ok) => (this._marquee = ok));
+    void this.updateComplete.then(() => this._attachObserver());
   }
 
   public disconnectedCallback(): void {
     super.disconnectedCallback();
-    if (this._tick) clearInterval(this._tick);
-    this._tick = undefined;
+    this._resizeObserver?.disconnect();
+    this._stopInterval();
   }
 
-  /** Seconds into the media now: the reported position plus the time since. */
-  private _position(attrs: Record<string, unknown>, playing: boolean): number | undefined {
-    const position = Number(attrs.media_position);
-    if (!Number.isFinite(position)) return undefined;
-    if (!playing || !attrs.media_position_updated_at) return position;
-    const since = (Date.now() - new Date(String(attrs.media_position_updated_at)).getTime()) / 1000;
-    return position + Math.max(0, since);
+  private get _stateObj(): HassEntity | undefined {
+    return this._config ? this.hass?.states[this._config.entity] : undefined;
   }
 
-  private _service(service: string, data: Record<string, unknown>): void {
+  protected render() {
+    if (!this._config || !this.hass) return nothing;
+    const stateObj = this._stateObj;
+    if (!stateObj) {
+      return html`<hui-warning>${this._config.entity}</hui-warning>`;
+    }
+    const image = this._imageOf(stateObj);
+
+    const imageStyle = {
+      "background-image": image ? `url(${this.hass.hassUrl(image)})` : "none",
+      width: `${this._cardHeight}px`,
+      "background-color": this._backgroundColor || "",
+    };
+    const gradientStyle = {
+      "background-image": `linear-gradient(to right, ${this._backgroundColor}, ${
+        this._backgroundColor + "00"
+      })`,
+      width: `${this._cardHeight}px`,
+    };
+
+    const entityState = stateObj.state;
+    const isOffState =
+      !isActive(stateObj) && entityState !== "unavailable" && entityState !== "unknown";
+    const isUnavailable =
+      entityState === "unavailable" || (isOffState && !supports(stateObj, Feature.TURN_ON));
+    const hasNoImage = !image;
+    const controls = mediaControls(stateObj);
+    const showControls =
+      !isUnavailable &&
+      controls &&
+      (!this._veryNarrow || isOffState || entityState === "idle" || entityState === "on");
+    const showVolume =
+      showControls && !isOffState && supports(stateObj, Feature.VOLUME_SET);
+    const showProgress = !this._narrow && hasProgress(stateObj);
+
+    const mediaDescriptionText = mediaDescription(stateObj);
+    const mediaTitleClean = cleanupMediaTitle(stateObj.attributes.media_title as string);
+    const name = this._config.name ?? stateObj.attributes.friendly_name ?? stateObj.entity_id;
+    const muted = stateObj.attributes.is_volume_muted === true;
+
+    return html`
+      <ha-card>
+        <div
+          class="background ${classMap({
+            "no-image": hasNoImage,
+            off: isOffState || isUnavailable,
+            unavailable: isUnavailable,
+          })}"
+        >
+          <div
+            class="color-block"
+            style=${styleMap({ "background-color": this._backgroundColor || "" })}
+          ></div>
+          <div
+            class="no-img"
+            style=${styleMap({ "background-color": this._backgroundColor || "" })}
+          ></div>
+          <div class="image" style=${styleMap(imageStyle)}></div>
+          ${hasNoImage
+            ? ""
+            : html`<div class="color-gradient" style=${styleMap(gradientStyle)}></div>`}
+        </div>
+        <div
+          class="player ${classMap({
+            "no-image": hasNoImage,
+            narrow: this._narrow && !this._veryNarrow,
+            off: isOffState || isUnavailable,
+            "no-progress": this._veryNarrow || !showProgress,
+            "no-controls": !showControls,
+          })}"
+          style=${styleMap({ color: this._foregroundColor || "" })}
+        >
+          <div class="top-info">
+            <div class="icon-name">
+              <ha-state-icon
+                class="icon"
+                .hass=${this.hass}
+                .stateObj=${stateObj}
+              ></ha-state-icon>
+              <div>${name}</div>
+            </div>
+            <div>
+              <ha-icon-button
+                .label=${this.hass.localize("ui.panel.lovelace.cards.show_more_info")}
+                class="more-info"
+                @click=${this._handleMoreInfo}
+              >
+                <ha-icon icon="mdi:dots-vertical"></ha-icon>
+              </ha-icon-button>
+            </div>
+          </div>
+          ${!isUnavailable && (mediaDescriptionText || mediaTitleClean || showControls)
+            ? html`
+                <div>
+                  <div class="title-controls">
+                    ${!mediaDescriptionText && !mediaTitleClean
+                      ? ""
+                      : html`
+                          <div class="media-info">
+                            ${this._marquee
+                              ? html`<hui-marquee
+                                  .text=${mediaTitleClean || mediaDescriptionText}
+                                  .active=${this._marqueeActive}
+                                  @mouseover=${this._marqueeMouseOver}
+                                  @mouseleave=${this._marqueeMouseLeave}
+                                ></hui-marquee>`
+                              : html`<div class="title">
+                                  ${mediaTitleClean || mediaDescriptionText}
+                                </div>`}
+                            ${!mediaTitleClean ? "" : mediaDescriptionText}
+                          </div>
+                        `}
+                    ${!showControls
+                      ? ""
+                      : html`
+                          <div class="controls">
+                            <div class="start">
+                              ${controls!.map(
+                                (control) => html`
+                                  <ha-icon-button
+                                    .label=${this.hass!.localize(
+                                      `ui.card.media_player.${control.action}`
+                                    )}
+                                    action=${control.action}
+                                    @click=${this._handleClick}
+                                  >
+                                    <ha-icon .icon=${control.icon}></ha-icon>
+                                  </ha-icon-button>
+                                `
+                              )}
+                            </div>
+                            ${showVolume
+                              ? html`<div class="volume">
+                                  ${supports(stateObj, Feature.VOLUME_MUTE)
+                                    ? html`<ha-icon-button
+                                        class="mute"
+                                        .label=${this.hass.localize(
+                                          "ui.card.media_player.media_volume_mute"
+                                        )}
+                                        @click=${this._handleMute}
+                                      >
+                                        <ha-icon
+                                          .icon=${muted ? "mdi:volume-off" : "mdi:volume-high"}
+                                        ></ha-icon>
+                                      </ha-icon-button>`
+                                    : html`<ha-icon
+                                        class="mute"
+                                        icon="mdi:volume-high"
+                                      ></ha-icon>`}
+                                  <ha-slider
+                                    class="volume-bar"
+                                    min="0"
+                                    max="100"
+                                    step="1"
+                                    labeled
+                                    .value=${Math.round(
+                                      Number(stateObj.attributes.volume_level ?? 0) * 100
+                                    )}
+                                    style=${styleMap({
+                                      "--ha-slider-indicator-color":
+                                        this._foregroundColor || "var(--accent-color)",
+                                    })}
+                                    @change=${this._handleVolume}
+                                  ></ha-slider>
+                                </div>`
+                              : nothing}
+                          </div>
+                        `}
+                  </div>
+                  ${!showProgress
+                    ? ""
+                    : html`
+                        <ha-slider
+                          class="progress"
+                          min="0"
+                          max=${Number(stateObj.attributes.media_duration) || 0}
+                          step="1"
+                          style=${styleMap({
+                            "--ha-slider-indicator-color":
+                              this._foregroundColor || "var(--accent-color)",
+                            cursor: supports(stateObj, Feature.SEEK) ? "pointer" : "initial",
+                          })}
+                          @change=${this._handleSeek}
+                        ></ha-slider>
+                      `}
+                </div>
+              `
+            : ""}
+        </div>
+      </ha-card>
+    `;
+  }
+
+  protected firstUpdated(): void {
+    void this._attachObserver();
+    this._measureCard();
+  }
+
+  protected updated(changed: PropertyValues): void {
+    super.updated(changed);
+    const stateObj = this._stateObj;
+    const image = stateObj ? this._imageOf(stateObj) : undefined;
+    if (image !== this._image) {
+      this._image = image;
+      if (image) {
+        void this._setColors(image);
+      } else {
+        this._foregroundColor = undefined;
+        this._backgroundColor = undefined;
+      }
+    }
+    this._writeProgress();
+    this._syncInterval();
+  }
+
+  private _imageOf(stateObj: HassEntity): string | undefined {
+    return (stateObj.attributes.entity_picture_local ||
+      stateObj.attributes.entity_picture) as string | undefined;
+  }
+
+  private async _setColors(image: string): Promise<void> {
+    try {
+      const vibrant = new Vibrant(this.hass!.hassUrl(image), { colorCount: 16 });
+      await vibrant.getPalette();
+      const picked = pickColours(vibrant.result?.colors ?? []);
+      if (this._image !== image) return;
+      this._backgroundColor = picked ? hex(picked.background) : undefined;
+      this._foregroundColor = picked ? hex(picked.foreground) : undefined;
+    } catch {
+      this._foregroundColor = undefined;
+      this._backgroundColor = undefined;
+    }
+  }
+
+  /** The stock controller owns the bar's value: written here, never bound, so a drag is not undone. */
+  private _writeProgress(): void {
+    const slider = this._progressBar;
+    const stateObj = this._stateObj;
+    if (!slider || !stateObj) return;
+    const states = (slider as unknown as { customStates?: { has(s: string): boolean } })
+      .customStates;
+    if (states?.has("dragging")) return;
+    slider.value = currentProgress(stateObj);
+  }
+
+  private _syncInterval(): void {
+    const stateObj = this._stateObj;
+    const running =
+      stateObj?.state === "playing" &&
+      stateObj.attributes.media_duration &&
+      stateObj.attributes.media_position !== undefined;
+    if (running && !this._interval) {
+      this._interval = setInterval(() => this._writeProgress(), 1000);
+    } else if (!running) {
+      this._stopInterval();
+    }
+  }
+
+  private _stopInterval(): void {
+    if (this._interval) clearInterval(this._interval);
+    this._interval = undefined;
+  }
+
+  private _measureCard(): void {
+    const card = this.shadowRoot?.querySelector("ha-card") as HTMLElement | null;
+    if (!card) return;
+    this._narrow = card.offsetWidth < 350;
+    this._veryNarrow = card.offsetWidth < 300;
+    this._cardHeight = card.offsetHeight;
+  }
+
+  private async _attachObserver(): Promise<void> {
+    if (!this._resizeObserver) {
+      let timer: ReturnType<typeof setTimeout> | undefined;
+      this._resizeObserver = new ResizeObserver(() => {
+        clearTimeout(timer);
+        timer = setTimeout(() => this._measureCard(), 250);
+      });
+    }
+    const card = this.shadowRoot?.querySelector("ha-card");
+    if (card) this._resizeObserver.observe(card);
+  }
+
+  private _call(service: string, data: Record<string, unknown> = {}): void {
     if (!this.hass || !this._config) return;
     void this.hass
       .callService("media_player", service, { entity_id: this._config.entity, ...data })
       .catch(() => undefined);
   }
 
-  protected updated(changed: PropertyValues): void {
-    super.updated(changed);
-    const stateObj = this._config ? this.hass?.states[this._config.entity] : undefined;
-    const picture = stateObj?.attributes.entity_picture as string | undefined;
-    if (picture !== this._picture) {
-      this._picture = picture;
-      this._colour = undefined;
-      if (picture) this._readColour(picture);
-    }
-  }
-
-  private _readColour(picture: string): void {
-    const img = new Image();
-    img.crossOrigin = "anonymous";
-    img.onload = () => {
-      if (this._picture !== picture) return;
-      const canvas = document.createElement("canvas");
-      canvas.width = 24;
-      canvas.height = 24;
-      const ctx = canvas.getContext("2d", { willReadFrequently: true });
-      if (!ctx) return;
-      try {
-        ctx.drawImage(img, 0, 0, 24, 24);
-        this._colour = averageColour(ctx.getImageData(0, 0, 24, 24).data);
-      } catch {
-        this._colour = undefined; // a tainted canvas: no colour, the theme's stays
-      }
-    };
-    img.src = this.hass?.hassUrl(picture) ?? picture;
-  }
-
-  private _call(service: string): void {
-    if (!this.hass || !this._config) return;
-    void this.hass
-      .callService("media_player", service, { entity_id: this._config.entity })
-      .catch(() => undefined);
-  }
-
-  private _moreInfo(): void {
+  private _handleMoreInfo(): void {
     this.dispatchEvent(
       new CustomEvent("hass-more-info", {
         detail: { entityId: this._config?.entity },
@@ -153,298 +406,332 @@ export class HorosPlayerCard extends LitElement {
     );
   }
 
-  protected render() {
-    if (!this._config || !this.hass) return nothing;
-    const stateObj = this.hass.states[this._config.entity];
-    if (!stateObj) {
-      return html`<ha-card><div class="warning">${this._config.entity}</div></ha-card>`;
-    }
-    const attrs = stateObj.attributes;
-    const features = Number(attrs.supported_features ?? 0);
-    const off = OFF_STATES.has(stateObj.state);
-    const playing = stateObj.state === "playing";
-    const picture = off ? undefined : (attrs.entity_picture as string | undefined);
-    const name = this._config.name ?? (attrs.friendly_name as string) ?? this._config.entity;
-    const title = off
-      ? this.hass.formatEntityState(stateObj)
-      : ((attrs.media_title as string) ?? this.hass.formatEntityState(stateObj));
-    // The first attribute that says something: integrations put the word
-    // "unknown" in an attribute they have nothing for.
-    const said = (value: unknown) =>
-      typeof value === "string" && value && !["unknown", "unavailable", "none"].includes(value.toLowerCase())
-        ? value
-        : undefined;
-    const subtitle = off
-      ? ""
-      : (said(attrs.media_artist) ??
-        said(attrs.media_series_title) ??
-        said(attrs.app_name) ??
-        said(attrs.source) ??
-        "");
-    const kindIcon =
-      this._config.icon ??
-      (attrs.icon as string) ??
-      (attrs.device_class === "speaker"
-        ? "mdi:speaker"
-        : attrs.device_class === "receiver"
-          ? "mdi:audio-video"
-          : "mdi:television");
+  private _handleClick(ev: MouseEvent): void {
+    this._call((ev.currentTarget as HTMLElement).getAttribute("action")!);
+  }
 
-    // The colour behind the text: the artwork's when there is one; else the
-    // theme's, as the stock card does; else the card's own background when off.
-    const colour = this._colour;
-    const bg = colour
-      ? `rgb(${colour.join(",")})`
-      : off
-        ? "var(--card-background-color, var(--ha-card-background))"
-        : "var(--primary-color)";
-    const dark = colour ? luminance(colour) < 0.4 : !off;
-    const fg = off && !colour ? "var(--primary-text-color)" : dark ? "#fff" : "#000";
+  private _handleMute(): void {
+    this._call("volume_mute", {
+      is_volume_muted: this._stateObj?.attributes.is_volume_muted !== true,
+    });
+  }
 
-    const button = (icon: string, label: string, service: string, show: boolean) =>
-      show
-        ? html`<ha-icon-button .label=${label} @click=${() => this._call(service)}>
-            <ha-icon icon=${icon}></ha-icon>
-          </ha-icon-button>`
-        : nothing;
+  private _handleVolume(ev: Event): void {
+    this._call("volume_set", { volume_level: Number((ev.target as Slider).value) / 100 });
+  }
 
-    return html`
-      <ha-card style="--player-bg: ${bg}; --player-fg: ${fg};" class=${off ? "off" : ""}>
-        ${picture
-          ? html`<div
-              class="art"
-              style="background-image: url('${this.hass.hassUrl(picture)}')"
-            ></div>`
-          : html`<div class="art placeholder">
-              <ha-icon icon=${kindIcon}></ha-icon>
-            </div>`}
-        <div class="content">
-          <div class="top">
-            <ha-icon class="state-icon" icon=${(attrs.icon as string) ?? "mdi:cast"}></ha-icon>
-            <span class="name">${name}</span>
-            <ha-icon-button class="more" .label=${name} @click=${this._moreInfo}>
-              <ha-icon icon="mdi:dots-vertical"></ha-icon>
-            </ha-icon-button>
-          </div>
-          <div class="title">${title}</div>
-          ${subtitle ? html`<div class="subtitle">${subtitle}</div>` : nothing}
-          <div class="controls">
-            ${button(
-              "mdi:power",
-              "Power",
-              off ? "turn_on" : "turn_off",
-              Boolean(features & (off ? TURN_ON : TURN_OFF))
-            )}
-            ${off
-              ? nothing
-              : html`${button("mdi:skip-previous", "Previous", "media_previous_track", Boolean(features & PREVIOUS))}
-                ${button(
-                  playing ? "mdi:pause" : "mdi:play",
-                  playing ? "Pause" : "Play",
-                  "media_play_pause",
-                  Boolean(features & (PAUSE | PLAY))
-                )}
-                ${button("mdi:skip-next", "Next", "media_next_track", Boolean(features & NEXT))}`}
-          </div>
-          ${this._ready && !off && features & VOLUME_SET
-            ? html`<div class="volume">
-                ${features & VOLUME_MUTE
-                  ? html`<ha-icon-button
-                      .label=${"Mute"}
-                      @click=${() =>
-                        this._service("volume_mute", { is_volume_muted: !attrs.is_volume_muted })}
-                    >
-                      <ha-icon
-                        icon=${attrs.is_volume_muted ? "mdi:volume-off" : "mdi:volume-high"}
-                      ></ha-icon>
-                    </ha-icon-button>`
-                  : html`<ha-icon class="vol-icon" icon="mdi:volume-high"></ha-icon>`}
-                <ha-slider
-                  min="0"
-                  max="100"
-                  step="1"
-                  .value=${Math.round(Number(attrs.volume_level ?? 0) * 100)}
-                  @change=${(ev: Event) =>
-                    this._service("volume_set", {
-                      volume_level: Number((ev.target as HTMLInputElement).value) / 100,
-                    })}
-                ></ha-slider>
-              </div>`
-            : nothing}
-        </div>
-        ${this._ready && !off && Number(attrs.media_duration) > 0
-          ? html`<ha-slider
-              class="progress"
-              min="0"
-              .max=${Number(attrs.media_duration)}
-              step="1"
-              .value=${this._position(attrs, playing) ?? 0}
-              .disabled=${!(features & SEEK)}
-              @change=${(ev: Event) =>
-                this._service("media_seek", {
-                  seek_position: Number((ev.target as HTMLInputElement).value),
-                })}
-            ></ha-slider>`
-          : nothing}
-      </ha-card>
-    `;
+  private _handleSeek(): void {
+    const stateObj = this._stateObj;
+    if (!stateObj || !supports(stateObj, Feature.SEEK)) return;
+    this._call("media_seek", { seek_position: this._progressBar?.value ?? 0 });
+  }
+
+  private _marqueeMouseOver(): void {
+    if (!this._marqueeActive) this._marqueeActive = true;
+  }
+
+  private _marqueeMouseLeave(): void {
+    if (this._marqueeActive) this._marqueeActive = false;
   }
 
   static styles = css`
     ha-card {
-      position: relative;
       overflow: hidden;
-      box-sizing: border-box;
-      background: var(--player-bg);
-      color: var(--player-fg);
-      transition: background-color 0.6s ease;
+      height: 100%;
     }
 
-    ha-card.off {
-      color: var(--primary-text-color);
-    }
-
-    /* The artwork fills the right half and fades into the card's colour, as on
-       the stock media card. */
-    .art {
-      position: absolute;
-      inset: 0 0 0 auto;
-      width: 55%;
-      background-size: cover;
-      background-position: center;
-    }
-
-    .art::before {
-      content: "";
-      position: absolute;
-      inset: 0;
-      background: linear-gradient(to right, var(--player-bg) 0%, transparent 60%);
-    }
-
-    .art.placeholder {
+    .background {
       display: flex;
-      align-items: center;
-      justify-content: center;
-      opacity: 0.25;
-      --mdc-icon-size: 72px;
+      position: absolute;
+      top: 0;
+      left: 0;
+      height: 100%;
+      width: 100%;
+      transition: filter 0.8s;
     }
 
-    .art.placeholder::before {
-      display: none;
+    .color-block {
+      background-color: var(--primary-color);
+      transition: background-color 0.8s;
+      width: 100%;
     }
 
-    .content {
+    .color-gradient {
+      position: absolute;
+      background-image: linear-gradient(to right, var(--primary-color), transparent);
+      height: 100%;
+      right: 0;
+      opacity: 1;
+      transition:
+        width 0.8s,
+        opacity 0.8s linear 0.8s;
+    }
+
+    .image {
+      background-color: var(--primary-color);
+      background-position: center;
+      background-size: cover;
+      background-repeat: no-repeat;
+      position: absolute;
+      right: 0;
+      height: 100%;
+      opacity: 1;
+      transition:
+        width 0.8s,
+        background-image 0.8s,
+        background-color 0.8s,
+        background-size 0.8s,
+        opacity 0.8s linear 0.8s;
+    }
+
+    .no-image .image {
+      opacity: 0;
+    }
+
+    .no-img {
+      background-color: var(--primary-color);
+      background-size: initial;
+      background-repeat: no-repeat;
+      background-position: center center;
+      padding-bottom: 0;
+      position: absolute;
+      right: 0;
+      height: 100%;
+      background-image: url("/static/images/card_media_player_bg.png");
+      width: 50%;
+      transition:
+        opacity 0.8s,
+        background-color 0.8s;
+    }
+
+    .off .image,
+    .off .color-gradient {
+      opacity: 0;
+      transition:
+        opacity 0s,
+        width 0.8s;
+      width: 0;
+    }
+
+    .unavailable .no-img,
+    .background:not(.off):not(.no-image) .no-img {
+      opacity: 0;
+    }
+
+    .player {
       position: relative;
+      padding: 16px;
+      height: 100%;
+      box-sizing: border-box;
       display: flex;
       flex-direction: column;
-      gap: var(--ha-space-1, 4px);
-      padding: var(--ha-space-3, 12px) var(--ha-space-4, 16px) var(--ha-space-4, 16px);
-    }
-
-    .top {
-      display: flex;
-      align-items: center;
-      gap: var(--ha-space-2, 8px);
-      font-size: var(--ha-font-size-m, 14px);
-      --mdc-icon-size: 20px;
-    }
-
-    .top .name {
-      flex: 1;
-      min-width: 0;
-      overflow: hidden;
-      text-overflow: ellipsis;
-      white-space: nowrap;
-      opacity: 0.85;
-    }
-
-    .top .more {
-      margin-inline-end: calc(-1 * var(--ha-space-2, 8px));
-    }
-
-    .title {
-      margin-top: var(--ha-space-2, 8px);
-      font-size: var(--ha-font-size-l, 18px);
-      font-weight: var(--ha-font-weight-medium, 500);
-      max-width: 60%;
-      overflow: hidden;
-      text-overflow: ellipsis;
-      display: -webkit-box;
-      -webkit-line-clamp: 2;
-      -webkit-box-orient: vertical;
-    }
-
-    .subtitle {
-      font-size: var(--ha-font-size-s, 13px);
-      opacity: 0.8;
-      max-width: 60%;
-      overflow: hidden;
-      text-overflow: ellipsis;
-      white-space: nowrap;
+      justify-content: space-between;
+      color: var(--text-primary-color);
+      transition-property: color, padding;
+      transition-duration: 0.4s;
     }
 
     .controls {
+      padding: 8px 8px 8px 0;
+      display: flex;
+      justify-content: flex-start;
+      align-items: center;
+      transition: padding, color;
+      transition-duration: 0.4s;
+      margin-left: -12px;
+      margin-inline-start: -12px;
+      margin-inline-end: initial;
+      padding-inline-start: 0;
+      padding-inline-end: 8px;
+      direction: ltr;
+    }
+
+    .controls > div {
       display: flex;
       align-items: center;
-      gap: var(--ha-space-1, 4px);
-      margin: var(--ha-space-2, 8px) 0 0 calc(-1 * var(--ha-space-2, 8px));
-      --mdc-icon-size: 28px;
-      --mdc-icon-button-size: 44px;
     }
 
-    ha-icon-button {
-      color: inherit;
+    .controls > .start {
+      flex-grow: 1;
     }
 
-    /* Thin bars, styled as the stock media card styles its progress bar. */
+    .controls ha-icon-button {
+      --ha-icon-button-size: 44px;
+      --mdc-icon-size: 30px;
+    }
+
+    ha-icon-button[action="media_play"],
+    ha-icon-button[action="media_play_pause"],
+    ha-icon-button[action="media_pause"],
+    ha-icon-button[action="media_stop"] {
+      --ha-icon-button-size: 56px;
+      --mdc-icon-size: 40px;
+    }
+
+    .top-info {
+      display: flex;
+      justify-content: space-between;
+    }
+
+    .icon-name {
+      display: flex;
+      height: fit-content;
+      align-items: center;
+    }
+
+    .icon-name ha-state-icon {
+      padding-right: 8px;
+      padding-inline-start: initial;
+      padding-inline-end: 8px;
+      direction: var(--direction);
+    }
+
+    .more-info {
+      position: absolute;
+      top: 4px;
+      right: 4px;
+      inset-inline-start: initial;
+      inset-inline-end: 4px;
+      direction: var(--direction);
+    }
+
+    .media-info {
+      text-overflow: ellipsis;
+      white-space: nowrap;
+      overflow: hidden;
+    }
+
+    hui-marquee,
+    .title {
+      font-size: 1.2em;
+      margin: 0px 0 4px;
+    }
+
+    .title {
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .title-controls {
+      padding-top: 16px;
+    }
+
     ha-slider {
       --track-size: 8px;
-      --ha-slider-track-color: #c8c8c880;
-      --ha-slider-indicator-color: var(--player-fg);
       width: 100%;
+      --ha-slider-track-color: rgba(200, 200, 200, 0.5);
     }
 
     ha-slider::part(thumb) {
       display: none;
     }
 
-    .volume {
-      display: flex;
-      align-items: center;
-      gap: var(--ha-space-1, 4px);
-      max-width: 55%;
-      margin-inline-start: calc(-1 * var(--ha-space-2, 8px));
-      --mdc-icon-size: 20px;
+    /*
+     * The one addition: the volume, at the end of the button row where the
+     * stock card keeps its secondary buttons, drawn as its progress bar is.
+     * On a card too narrow for both it wraps under the buttons.
+     */
+    .controls {
+      flex-wrap: wrap;
     }
 
-    /* Where the mute button would be, so every volume bar starts in one place. */
-    .vol-icon {
+    .controls > .volume {
+      flex: 1 1 140px;
+      max-width: 50%;
+      min-width: 140px;
+      --mdc-icon-size: 24px;
+    }
+
+    .narrow .controls > .volume {
+      max-width: none;
+    }
+
+    .volume .mute {
       flex: none;
+      --ha-icon-button-size: 44px;
+      --mdc-icon-size: 24px;
+    }
+
+    ha-icon.mute {
       display: flex;
       justify-content: center;
-      /* The width HA gives an ha-icon-button. */
-      width: 48px;
+      width: 44px;
     }
 
-    ha-slider.progress {
-      position: relative;
-      display: block;
-      padding: 0 var(--ha-space-4, 16px) var(--ha-space-2, 8px);
-      box-sizing: border-box;
+    .volume-bar {
+      flex: 1;
+      min-width: 0;
     }
 
-    .warning {
-      padding: var(--ha-space-4, 16px);
+    .no-image .controls {
+      padding: 0;
+    }
+
+    .off.background {
+      filter: grayscale(1);
+    }
+
+    .narrow .controls,
+    .no-progress .controls {
+      padding-bottom: 0;
+    }
+
+    .narrow ha-icon-button {
+      --ha-icon-button-size: 40px;
+      --mdc-icon-size: 28px;
+    }
+
+    .narrow ha-icon-button[action="media_play"],
+    .narrow ha-icon-button[action="media_play_pause"],
+    .narrow ha-icon-button[action="media_pause"],
+    .narrow ha-icon-button[action="media_stop"] {
+      --ha-icon-button-size: 50px;
+      --mdc-icon-size: 36px;
+    }
+
+    .no-progress.player:not(.no-controls) {
+      padding-bottom: 0px;
     }
   `;
+}
+
+let marquee: Promise<boolean> | undefined;
+
+/**
+ * hui-marquee — the title that scrolls on hover — arrives with the stock media
+ * card's own bundle; asking HA for one such card loads it. Without it the
+ * title is cut with an ellipsis instead.
+ */
+function loadMarquee(entity: string): Promise<boolean> {
+  if (customElements.get("hui-marquee")) return Promise.resolve(true);
+  marquee ??= (async () => {
+    const loader = (
+      window as unknown as {
+        loadCardHelpers?: () => Promise<{
+          createCardElement?: (config: Record<string, unknown>) => HTMLElement;
+        }>;
+      }
+    ).loadCardHelpers;
+    try {
+      const helpers = await loader?.();
+      helpers?.createCardElement?.({ type: "media-control", entity });
+    } catch {
+      // Only the import matters.
+    }
+    return Promise.race([
+      customElements.whenDefined("hui-marquee").then(() => true),
+      new Promise<boolean>((resolve) => setTimeout(() => resolve(false), 5000)),
+    ]);
+  })();
+  return marquee;
 }
 
 registerCard("horos-player-card", HorosPlayerCard, {
   type: "horos-player-card",
   name: { ru: "Плеер", en: "Player" },
   description: {
-    ru: "Как стандартная карточка медиа — обложка, цвет, кнопки — и громкость в ней же",
-    en: "Like the stock media card — artwork, colour, buttons — with the volume in the same card",
+    ru: "Стандартная карточка медиа с полосой громкости",
+    en: "The stock media card with a volume bar",
   },
   preview: true,
 });

@@ -10,7 +10,8 @@
     "test:watch": "vitest"
   },
   "dependencies": {
-    "lit": "^3.2.1"
+    "lit": "^3.2.1",
+    "node-vibrant": "4.0.4"
   },
   "devDependencies": {
     "happy-dom": "^20.14.0",
