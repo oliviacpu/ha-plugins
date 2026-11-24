@@ -1806,6 +1806,17 @@ const it = (s) => Math.max(0, Math.min(100, s)), V = ue`
     text-overflow: ellipsis;
   }
 
+  /*
+   * Every glyph of a row comes after its label, never before it, so the labels
+   * of a list start on one line however many of them carry a glyph. The label
+   * is the part that gives way: it is cut with an ellipsis and the glyph stays.
+   */
+  .level .name .label {
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
   .level .name ha-icon {
     flex: none;
     color: var(--error-color, #db4437);
@@ -1941,9 +1952,9 @@ function K(s, e, t) {
     }}
           >
             <span class="name">
-              ${i.alarm ? v`<ha-icon
+              <span class="label">${i.name}</span>${i.alarm ? v`<ha-icon
                     icon=${i.alarmIcon ?? "mdi:alert-circle"}
-                  ></ha-icon>` : i.icon ? v`<ha-icon class="mark" icon=${i.icon}></ha-icon>` : m}${i.name}${i.flag ? v`<ha-icon class="flag" icon=${i.flag}></ha-icon>` : m}
+                  ></ha-icon>` : i.icon ? v`<ha-icon class="mark" icon=${i.icon}></ha-icon>` : m}${i.flag ? v`<ha-icon class="flag" icon=${i.flag}></ha-icon>` : m}
             </span>
             <span class="bar">
               <span class="track"></span>

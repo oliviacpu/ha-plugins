@@ -62,7 +62,8 @@ differs:
   reading as "—" (with its icon) instead of dropping it, so tiles side by side keep one
   shape. ha-smart-charging is off the host and was not updated; copy this over if it
   comes back.
-- `levels.ts` — ours has no cutoffs. On 2026-09-23 ha-smart-charging was taken off the
+- `levels.ts` — since 2026-11-24 ours draws every row glyph after the label (see
+  Conventions); copy that over if ha-smart-charging comes back. Also, ours has no cutoffs. On 2026-09-23 ha-smart-charging was taken off the
   HA host (the phone and the watch reported their battery too unreliably for it to work)
   and its watch cradle became a plain automation. With it went the `number` entities the
   `minLimit`/`maxLimit` ticks were drawn from, so the ticks, the band, the carets, the
@@ -137,6 +138,11 @@ npm run build   # tsc --noEmit && vite build → ../dist/ha-plugins-cards.js
 - The shared config fields (`name`, `icon`, `state_content`, `levels`, `features`, the six
   actions) live in `TileBaseConfig`; a subclass's `setConfig` must put them into
   `this.base`.
+- **Glyphs go after the label, never before it.** In a level row the alarm glyph, the
+  row's own glyph (a day's weather) and the flag all follow the name, so the labels of a
+  list start on one line whichever rows carry a glyph; the label is what gets cut with an
+  ellipsis, the glyph stays. The owner's rule, 2026-11-24. (The large values keep their
+  icon in front: there the icon is the label.)
 - Height is one layout row for the line and the rest for what is under it. A card counts
   its rows twice: `contentRows()` is how tall it is (three level rows to a layout row, one
   row per feature or control), `fixedRows()` is how small it may be made and counts only

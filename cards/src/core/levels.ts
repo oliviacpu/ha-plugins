@@ -30,7 +30,7 @@ export interface LevelRow {
    * that started at zero would say the night was the reading.
    */
   from?: number;
-  /** A glyph before the name, in the row's own colour: the day's condition. */
+  /** A glyph after the name, in the row's own colour: the day's condition. */
   icon?: string;
   /** Needs attention. */
   alarm?: boolean;
@@ -134,6 +134,17 @@ export const levelStyles = css`
     font-size: var(--ha-font-size-s, 12px);
     color: var(--secondary-text-color);
     white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  /*
+   * Every glyph of a row comes after its label, never before it, so the labels
+   * of a list start on one line however many of them carry a glyph. The label
+   * is the part that gives way: it is cut with an ellipsis and the glyph stays.
+   */
+  .level .name .label {
+    min-width: 0;
     overflow: hidden;
     text-overflow: ellipsis;
   }
@@ -281,13 +292,13 @@ export function renderLevels(
             }}
           >
             <span class="name">
-              ${row.alarm
+              <span class="label">${row.name}</span>${row.alarm
                 ? html`<ha-icon
                     icon=${row.alarmIcon ?? "mdi:alert-circle"}
                   ></ha-icon>`
                 : row.icon
                   ? html`<ha-icon class="mark" icon=${row.icon}></ha-icon>`
-                  : nothing}${row.name}${row.flag
+                  : nothing}${row.flag
                 ? html`<ha-icon class="flag" icon=${row.flag}></ha-icon>`
                 : nothing}
             </span>

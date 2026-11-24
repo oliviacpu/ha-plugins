@@ -79,6 +79,19 @@ describe("level rows", () => {
     expect(buttons[1].classList.contains("low")).toBe(true);
   });
 
+  it("every glyph comes after the label, never before it", () => {
+    const row = draw([
+      { ...rows[1], icon: undefined },
+      { ...rows[0], icon: "mdi:weather-sunny", flag: "mdi:alert-circle" },
+    ]).querySelectorAll("button.level .name");
+    for (const name of row) {
+      const tags = [...name.children].map((el) => el.tagName.toLowerCase());
+      expect(tags[0]).toBe("span");
+      expect(tags.slice(1).every((tag) => tag === "ha-icon")).toBe(true);
+    }
+    expect(row[1].querySelectorAll("ha-icon")).toHaveLength(2);
+  });
+
   it("the tooltip names both the row and the value", () => {
     expect(draw().querySelector("button.level")!.getAttribute("title")).toBe(
       "Cyan: 50 %"
