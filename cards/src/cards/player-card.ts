@@ -415,7 +415,6 @@ export class HorosPlayerCard extends LitElement {
       max-width: 55%;
       margin-inline-start: calc(-1 * var(--ha-space-2, 8px));
       --mdc-icon-size: 20px;
-      --mdc-icon-button-size: 36px;
     }
 
     /* Where the mute button would be, so every volume bar starts in one place. */
@@ -423,7 +422,8 @@ export class HorosPlayerCard extends LitElement {
       flex: none;
       display: flex;
       justify-content: center;
-      width: var(--mdc-icon-button-size, 36px);
+      /* The width HA gives an ha-icon-button. */
+      width: 48px;
     }
 
     ha-slider.progress {
