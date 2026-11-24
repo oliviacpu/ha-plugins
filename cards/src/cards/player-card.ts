@@ -15,6 +15,8 @@ export interface PlayerCardConfig {
 /** media_player supported_features bits, as in HA's MediaPlayerEntityFeature. */
 const PAUSE = 1;
 const VOLUME_SET = 4;
+const VOLUME_MUTE = 8;
+const SEEK = 2;
 const PREVIOUS = 16;
 const NEXT = 32;
 const TURN_ON = 128;
@@ -39,6 +41,9 @@ export class HorosPlayerCard extends LitElement {
   @state() private _ready = false;
 
   private _picture?: string;
+
+  /** Progress moves with the clock between state updates, as on the stock card. */
+  private _tick?: ReturnType<typeof setInterval>;
 
   public static async getConfigElement(): Promise<LovelaceCardEditor> {
     await import("../editors/player-card-editor");
@@ -65,9 +70,35 @@ export class HorosPlayerCard extends LitElement {
 
   public connectedCallback(): void {
     super.connectedCallback();
-    // hui-card-features and the stock slider feature are registered by the
-    // tile's bundle; wait for it before drawing the volume row.
+    // ha-slider and ha-icon-button are registered by the stock cards' bundle;
+    // wait for it before drawing the bars.
     void ensureTileInternals().then((ok) => (this._ready = ok));
+    this._tick = setInterval(() => {
+      const s = this._config ? this.hass?.states[this._config.entity] : undefined;
+      if (s?.state === "playing" && s.attributes.media_duration) this.requestUpdate();
+    }, 1000);
+  }
+
+  public disconnectedCallback(): void {
+    super.disconnectedCallback();
+    if (this._tick) clearInterval(this._tick);
+    this._tick = undefined;
+  }
+
+  /** Seconds into the media now: the reported position plus the time since. */
+  private _position(attrs: Record<string, unknown>, playing: boolean): number | undefined {
+    const position = Number(attrs.media_position);
+    if (!Number.isFinite(position)) return undefined;
+    if (!playing || !attrs.media_position_updated_at) return position;
+    const since = (Date.now() - new Date(String(attrs.media_position_updated_at)).getTime()) / 1000;
+    return position + Math.max(0, since);
+  }
+
+  private _service(service: string, data: Record<string, unknown>): void {
+    if (!this.hass || !this._config) return;
+    void this.hass
+      .callService("media_player", service, { entity_id: this._config.entity, ...data })
+      .catch(() => undefined);
   }
 
   protected updated(changed: PropertyValues): void {
@@ -211,14 +242,45 @@ export class HorosPlayerCard extends LitElement {
                 ${button("mdi:skip-next", "Next", "media_next_track", Boolean(features & NEXT))}`}
           </div>
           ${this._ready && !off && features & VOLUME_SET
-            ? html`<hui-card-features
-                class="volume"
-                .hass=${this.hass}
-                .context=${{ entity_id: this._config.entity }}
-                .features=${[{ type: "media-player-volume-slider", show_mute_button: true }]}
-              ></hui-card-features>`
+            ? html`<div class="volume">
+                ${features & VOLUME_MUTE
+                  ? html`<ha-icon-button
+                      .label=${"Mute"}
+                      @click=${() =>
+                        this._service("volume_mute", { is_volume_muted: !attrs.is_volume_muted })}
+                    >
+                      <ha-icon
+                        icon=${attrs.is_volume_muted ? "mdi:volume-off" : "mdi:volume-high"}
+                      ></ha-icon>
+                    </ha-icon-button>`
+                  : html`<ha-icon class="vol-icon" icon="mdi:volume-high"></ha-icon>`}
+                <ha-slider
+                  min="0"
+                  max="100"
+                  step="1"
+                  .value=${Math.round(Number(attrs.volume_level ?? 0) * 100)}
+                  @change=${(ev: Event) =>
+                    this._service("volume_set", {
+                      volume_level: Number((ev.target as HTMLInputElement).value) / 100,
+                    })}
+                ></ha-slider>
+              </div>`
             : nothing}
         </div>
+        ${this._ready && !off && Number(attrs.media_duration) > 0
+          ? html`<ha-slider
+              class="progress"
+              min="0"
+              .max=${Number(attrs.media_duration)}
+              step="1"
+              .value=${this._position(attrs, playing) ?? 0}
+              .disabled=${!(features & SEEK)}
+              @change=${(ev: Event) =>
+                this._service("media_seek", {
+                  seek_position: Number((ev.target as HTMLInputElement).value),
+                })}
+            ></ha-slider>`
+          : nothing}
       </ha-card>
     `;
   }
@@ -330,19 +392,37 @@ export class HorosPlayerCard extends LitElement {
       color: inherit;
     }
 
-    /* The stock slider in the text's colour, its track a faint wash of it, so
-       it reads on any artwork colour the way the buttons do. */
+    /* Thin bars, styled as the stock media card styles its progress bar. */
+    ha-slider {
+      --track-size: 8px;
+      --ha-slider-track-color: #c8c8c880;
+      --ha-slider-indicator-color: var(--player-fg);
+      width: 100%;
+    }
+
+    ha-slider::part(thumb) {
+      display: none;
+    }
+
     .volume {
-      margin-top: var(--ha-space-2, 8px);
-      max-width: 62%;
-      --feature-height: 36px;
-      --feature-color: var(--player-fg);
-      --control-slider-color: var(--player-fg);
-      --control-slider-background: var(--player-fg);
-      --control-slider-background-opacity: 0.25;
-      --control-button-icon-color: var(--player-fg);
-      --control-button-background-color: var(--player-fg);
-      --control-button-background-opacity: 0.2;
+      display: flex;
+      align-items: center;
+      gap: var(--ha-space-1, 4px);
+      max-width: 55%;
+      margin-inline-start: calc(-1 * var(--ha-space-2, 8px));
+      --mdc-icon-size: 20px;
+      --mdc-icon-button-size: 36px;
+    }
+
+    .vol-icon {
+      padding: 0 var(--ha-space-2, 8px);
+    }
+
+    ha-slider.progress {
+      position: relative;
+      display: block;
+      padding: 0 var(--ha-space-4, 16px) var(--ha-space-2, 8px);
+      box-sizing: border-box;
     }
 
     .warning {
