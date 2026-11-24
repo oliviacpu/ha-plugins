@@ -286,6 +286,18 @@ players:
   - media_player.bedroom_kodi
 ```
 
+### Player — `horos-player-card`
+
+The stock media card — artwork fading into a colour taken from it, the title, the playback
+buttons — with the volume slider (and mute) in the same card. For a TV whose sound comes
+out of a soundbar, point it at a universal player that has both. (Screenshot to come.)
+
+```yaml
+type: custom:horos-player-card
+entity: media_player.living_room_media
+name: Living room TV
+```
+
 ### Air conditioner — `horos-ac-tile`
 
 ![Air conditioner](docs/images/ac.png)
