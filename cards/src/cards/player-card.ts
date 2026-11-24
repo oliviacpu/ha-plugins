@@ -67,7 +67,9 @@ export class HorosPlayerCard extends LitElement {
   }
 
   public getGridOptions() {
-    return { columns: 12, rows: "auto", min_columns: 6, min_rows: 3 };
+    // As tall as what is in it, like the stock media card: a fixed minimum
+    // made the slot shorter than the card, and its bottom corners spilled out.
+    return { columns: 12, rows: "auto", min_columns: 6 };
   }
 
   public connectedCallback(): void {
@@ -292,7 +294,6 @@ export class HorosPlayerCard extends LitElement {
     ha-card {
       position: relative;
       overflow: hidden;
-      height: 100%;
       box-sizing: border-box;
       background: var(--player-bg);
       color: var(--player-fg);

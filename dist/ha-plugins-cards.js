@@ -6135,7 +6135,7 @@ class Ne extends ne {
     return 4;
   }
   getGridOptions() {
-    return { columns: 12, rows: "auto", min_columns: 6, min_rows: 3 };
+    return { columns: 12, rows: "auto", min_columns: 6 };
   }
   connectedCallback() {
     super.connectedCallback(), tt().then((e) => this._ready = e), this._tick = setInterval(() => {
@@ -6272,7 +6272,6 @@ class Ne extends ne {
     ha-card {
       position: relative;
       overflow: hidden;
-      height: 100%;
       box-sizing: border-box;
       background: var(--player-bg);
       color: var(--player-fg);
