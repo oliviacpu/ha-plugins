@@ -133,13 +133,26 @@ export class HorosPlayerCard extends LitElement {
     const title = off
       ? this.hass.formatEntityState(stateObj)
       : ((attrs.media_title as string) ?? this.hass.formatEntityState(stateObj));
+    // The first attribute that says something: integrations put the word
+    // "unknown" in an attribute they have nothing for.
+    const said = (value: unknown) =>
+      typeof value === "string" && value && !["unknown", "unavailable", "none"].includes(value.toLowerCase())
+        ? value
+        : undefined;
     const subtitle = off
       ? ""
-      : ((attrs.media_artist as string) ??
-        (attrs.media_series_title as string) ??
-        (attrs.app_name as string) ??
-        (attrs.source as string) ??
+      : (said(attrs.media_artist) ??
+        said(attrs.media_series_title) ??
+        said(attrs.app_name) ??
+        said(attrs.source) ??
         "");
+    const kindIcon =
+      (attrs.icon as string) ??
+      (attrs.device_class === "speaker"
+        ? "mdi:speaker"
+        : attrs.device_class === "receiver"
+          ? "mdi:audio-video"
+          : "mdi:television");
 
     // The colour behind the text: the artwork's when there is one; else the
     // theme's, as the stock card does; else the card's own background when off.
@@ -167,7 +180,7 @@ export class HorosPlayerCard extends LitElement {
               style="background-image: url('${this.hass.hassUrl(picture)}')"
             ></div>`
           : html`<div class="art placeholder">
-              <ha-icon icon=${(attrs.icon as string) ?? "mdi:television"}></ha-icon>
+              <ha-icon icon=${kindIcon}></ha-icon>
             </div>`}
         <div class="content">
           <div class="top">
@@ -202,7 +215,6 @@ export class HorosPlayerCard extends LitElement {
                 class="volume"
                 .hass=${this.hass}
                 .context=${{ entity_id: this._config.entity }}
-                .color=${fg === "#000" ? "black" : "white"}
                 .features=${[{ type: "media-player-volume-slider", show_mute_button: true }]}
               ></hui-card-features>`
             : nothing}
@@ -318,10 +330,19 @@ export class HorosPlayerCard extends LitElement {
       color: inherit;
     }
 
+    /* The stock slider in the text's colour, its track a faint wash of it, so
+       it reads on any artwork colour the way the buttons do. */
     .volume {
       margin-top: var(--ha-space-2, 8px);
       max-width: 62%;
       --feature-height: 36px;
+      --feature-color: var(--player-fg);
+      --control-slider-color: var(--player-fg);
+      --control-slider-background: var(--player-fg);
+      --control-slider-background-opacity: 0.25;
+      --control-button-icon-color: var(--player-fg);
+      --control-button-background-color: var(--player-fg);
+      --control-button-background-opacity: 0.2;
     }
 
     .warning {
