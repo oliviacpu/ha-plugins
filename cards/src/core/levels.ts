@@ -45,6 +45,11 @@ export interface LevelRow {
   flagTitle?: string;
   /** On the charger: the bar has a light running along it. */
   charging?: boolean;
+  /**
+   * The reading is old: the bar still shows the last level, and a yellow clock
+   * after the name says not to trust it. The text goes into the tooltip.
+   */
+  stale?: string;
 }
 
 export interface LevelsOptions {
@@ -158,6 +163,11 @@ export const levelStyles = css`
   /* The row's own glyph is not an alarm and is not painted like one. */
   .level .name ha-icon.mark {
     color: var(--ink);
+  }
+
+  /* An old reading is a caution, not an alarm. */
+  .level .name ha-icon.stale {
+    color: var(--yellow-color, #fdd835);
   }
 
   /*
@@ -285,7 +295,7 @@ export function renderLevels(
           <button
             class="level ${row.alarm ? "low" : ""}"
             style="--ink: ${row.ink};"
-            title="${row.name}: ${row.text}${row.flagTitle ? ` — ${row.flagTitle}` : ""}"
+            title="${row.name}: ${row.text}${row.flagTitle ? ` — ${row.flagTitle}` : ""}${row.stale ? ` — ${row.stale}` : ""}"
             @click=${(ev: Event) => {
               ev.stopPropagation();
               onTap(row.entityId);
@@ -300,6 +310,8 @@ export function renderLevels(
                   ? html`<ha-icon class="mark" icon=${row.icon}></ha-icon>`
                   : nothing}${row.flag
                 ? html`<ha-icon class="flag" icon=${row.flag}></ha-icon>`
+                : nothing}${row.stale
+                ? html`<ha-icon class="stale" icon="mdi:clock-alert-outline"></ha-icon>`
                 : nothing}
             </span>
             <span class="bar">

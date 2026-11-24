@@ -128,6 +128,16 @@ export class HorosPersonTile extends BaseTileCard {
           alarm: level !== undefined && level < 20,
           alarmIcon: "mdi:battery-alert-variant-outline",
           charging,
+          // A sensor that keeps its last reading says so with `stale` and
+          // `last_heard` (nearby_bluetooth's AirPods).
+          stale:
+            role?.stateObj?.attributes.stale === true
+              ? `last heard ${
+                  role.stateObj.attributes.last_heard
+                    ? new Date(String(role.stateObj.attributes.last_heard)).toLocaleString()
+                    : "a while ago"
+                }`
+              : undefined,
         };
       });
 
